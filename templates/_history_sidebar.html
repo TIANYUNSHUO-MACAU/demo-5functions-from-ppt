@@ -1,0 +1,50 @@
+<!-- ScholarAI 历史记录侧栏 (右侧滑出) -->
+<div id="history-sidebar" class="fixed top-0 right-0 h-full w-80 bg-surface-container-lowest border-l border-outline-variant shadow-2xl z-[90] transform translate-x-full transition-transform duration-300 flex flex-col">
+    <!-- 标题栏 -->
+    <div class="flex items-center justify-between px-4 py-4 border-b border-outline-variant">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[20px]">history</span>
+            <h3 class="text-sm font-semibold text-on-surface">历史记录</h3>
+            <span id="history-count" class="text-xs text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">0 条记录</span>
+        </div>
+        <div class="flex items-center gap-1">
+            <button onclick="clearAllHistory()" class="p-1.5 hover:bg-error-container rounded-lg transition-colors" title="清空所有">
+                <span class="material-symbols-outlined text-[18px] text-on-surface-variant hover:text-error">delete_sweep</span>
+            </button>
+            <button onclick="toggleHistorySidebar()" class="p-1.5 hover:bg-surface-container rounded-lg transition-colors">
+                <span class="material-symbols-outlined text-[18px] text-on-surface-variant">close</span>
+            </button>
+        </div>
+    </div>
+    <!-- 工具切换下拉框 -->
+    <div class="px-4 py-2 bg-surface-container-low border-b border-outline-variant">
+        <select id="history-tool-select" onchange="switchHistoryTool(this.value)" class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg text-xs py-1.5 px-3 focus:ring-0 focus:border-primary text-on-surface font-medium hover:border-primary transition-colors duration-200 cursor-pointer">
+            <option value="resume">简历优化历史</option>
+            <option value="copywriting">文案生成历史</option>
+            <option value="translate">翻译助手历史</option>
+            <option value="pdf_summary">PDF 摘要历史</option>
+            <option value="csv">CSV 预览历史</option>
+        </select>
+    </div>
+    <!-- 记录列表 -->
+    <div id="history-list" class="flex-1 overflow-y-auto p-3 space-y-2">
+        <div class="text-center text-on-surface-variant text-sm py-12">
+            <span class="material-symbols-outlined text-3xl mb-2 block">inbox</span>
+            <p>暂无历史记录</p>
+        </div>
+    </div>
+</div>
+<!-- 遮罩 -->
+<div id="history-overlay" class="hidden fixed inset-0 bg-inverse-surface/20 z-[89]" onclick="toggleHistorySidebar()"></div>
+<script>
+// 增强侧栏切换（带遮罩）
+const _origToggle = toggleHistorySidebar;
+toggleHistorySidebar = function() {
+    _origToggle();
+    const sidebar = document.getElementById('history-sidebar');
+    const overlay = document.getElementById('history-overlay');
+    if (sidebar && overlay) {
+        overlay.classList.toggle('hidden', sidebar.classList.contains('translate-x-full'));
+    }
+};
+</script>

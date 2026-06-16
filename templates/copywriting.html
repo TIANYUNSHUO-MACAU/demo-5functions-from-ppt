@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>文案生成 - AI助手</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Geist:wght@400;600;700&display=swap" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#c0c1ff", secondary: "#4cd7f6", tertiary: "#ffdcc5",
+                        surface: "#131317", "surface-container": "#1f1f27",
+                        "on-surface": "#e4e1ed", "on-surface-variant": "#c7c4d7",
+                        "on-primary": "#1000a9", "background": "#13131b",
+                    },
+                    fontFamily: { sans: ["Geist", "sans-serif"], mono: ["JetBrains Mono", "monospace"] },
+                },
+            },
+        }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Geist', sans-serif; background: #13131b; color: #e4e1ed; min-height: 100vh; }
+        #p5-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .glass-card { background: rgba(31, 31, 39, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .input-area { background: rgba(19, 19, 27, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.3s ease; }
+        .input-area:focus { border-color: rgba(76, 215, 246, 0.5); box-shadow: 0 0 20px rgba(76, 215, 246, 0.2); outline: none; }
+        .btn-primary { background: linear-gradient(135deg, #4cd7f6 0%, #3bc4e0 100%); color: #001f26; transition: all 0.3s ease; }
+        .btn-primary:hover:not(:disabled) { transform: scale(1.02); box-shadow: 0 10px 30px rgba(76, 215, 246, 0.4); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-secondary { background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); transition: all 0.3s ease; }
+        .btn-secondary:hover { border-color: rgba(76, 215, 246, 0.5); background: rgba(76, 215, 246, 0.1); }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .result-card { background: rgba(19, 19, 27, 0.9); border: 1px solid rgba(76, 215, 246, 0.2); animation: fadeIn 0.5s ease; }
+        .scheme-card { transition: all 0.3s ease; }
+        .scheme-card:hover { transform: translateY(-2px); border-color: rgba(76, 215, 246, 0.5); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .style-tag { transition: all 0.3s ease; }
+        .style-tag.selected { background: rgba(76, 215, 246, 0.2); border-color: #4cd7f6; color: #4cd7f6; }
+        .markdown-content h1, .markdown-content h2, .markdown-content h3, .markdown-content h4 { color: #4cd7f6; margin-top: 0.75rem; margin-bottom: 0.5rem; }
+        .markdown-content strong { color: #c0c1ff; font-weight: 600; }
+        .markdown-content em { color: #ffdcc5; }
+        .markdown-content p { color: #e4e1ed; line-height: 1.75; margin-bottom: 0.5rem; }
+        .markdown-content li { color: #e4e1ed; line-height: 1.7; }
+        .markdown-content blockquote { border-left: 3px solid #4cd7f6; padding-left: 12px; color: #c7c4d7; font-style: italic; margin: 0.5rem 0; }
+        .markdown-content code { background: #1f1f27; padding: 2px 6px; border-radius: 4px; color: #4cd7f6; font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
+        .markdown-content hr { display: none; }
+    </style>
+</head>
+<body>
+    <div id="p5-canvas"></div>
+
+    <div class="relative z-10 max-w-4xl mx-auto px-4 py-8">
+        <!-- Navigation -->
+        <nav class="flex items-center justify-between mb-12">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center text-secondary">
+                    <span class="material-symbols-outlined">edit_note</span>
+                </div>
+                <span class="text-xl font-bold text-on-surface">AI助手</span>
+            </a>
+            <div class="flex items-center gap-4">
+                <a href="/" class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1">
+                    <span class="material-symbols-outlined text-lg">home</span>
+                    <span>返回首页</span>
+                </a>
+                <span id="api-status-badge" class="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-yellow-500/10 border border-yellow-500/30 text-yellow-400" title="当前为模拟返回">
+                    <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
+                    <span id="api-status-text">未配置</span>
+                </span>
+                <button onclick="openSettings()" class="btn-secondary px-4 py-2 rounded-full text-sm font-medium text-on-surface flex items-center gap-2" title="配置 AI 模型与 API Key">
+                    <span class="material-symbols-outlined text-base">settings</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Page Header -->
+        <div class="mb-8">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-12 h-12 rounded-xl bg-secondary/20 flex items-center justify-center text-secondary">
+                    <span class="material-symbols-outlined text-2xl">edit_note</span>
+                </div>
+                <h1 class="text-3xl font-bold text-on-surface">智能文案生成</h1>
+            </div>
+            <p class="text-on-surface-variant">描述场景或产品，AI 一键生成多种风格的专业文案</p>
+        </div>
+
+        <!-- Input Section -->
+        <div class="glass-card rounded-2xl p-8 mb-8">
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-on-surface mb-3">场景描述</label>
+                <textarea id="scene-input" class="input-area w-full h-32 rounded-xl p-4 text-on-surface placeholder-on-surface-variant resize-none" placeholder="描述你的场景或产品，例如：一款面向年轻人的运动饮料，主打提神抗疲劳..."></textarea>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-on-surface mb-3">文案风格</label>
+                <div class="flex flex-wrap gap-3">
+                    <button type="button" class="style-tag px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant text-sm" data-style="简洁有力" onclick="selectStyle(this)">简洁有力</button>
+                    <button type="button" class="style-tag px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant text-sm" data-style="温暖亲和" onclick="selectStyle(this)">温暖亲和</button>
+                    <button type="button" class="style-tag px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant text-sm" data-style="专业严谨" onclick="selectStyle(this)">专业严谨</button>
+                    <button type="button" class="style-tag px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant text-sm" data-style="活泼有趣" onclick="selectStyle(this)">活泼有趣</button>
+                    <button type="button" class="style-tag px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant text-sm" data-style="高端奢华" onclick="selectStyle(this)">高端奢华</button>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-on-surface mb-3">生成数量</label>
+                <select id="count-select" class="input-area px-4 py-3 rounded-xl text-on-surface">
+                    <option value="3">3条</option>
+                    <option value="5" selected>5条</option>
+                    <option value="8">8条</option>
+                </select>
+            </div>
+
+            <div class="flex flex-wrap gap-4">
+                <button id="generate-btn" onclick="generateCopywriting()" class="btn-primary px-8 py-3 rounded-xl font-semibold flex items-center gap-2">
+                    <span class="material-symbols-outlined">auto_awesome</span>
+                    生成文案
+                </button>
+                <button onclick="clearInput()" class="btn-secondary px-8 py-3 rounded-xl font-semibold text-on-surface">清空内容</button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="hidden glass-card rounded-2xl p-8 mb-8 text-center">
+            <div class="inline-block w-12 h-12 border-4 border-secondary border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p class="text-on-surface">AI 正在为你生成精彩文案...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="hidden glass-card rounded-2xl p-6 mb-8 border border-red-500/30">
+            <div class="flex items-start gap-3">
+                <span class="material-symbols-outlined text-red-400">error</span>
+                <div>
+                    <p class="text-red-400 font-medium">出错了</p>
+                    <p id="error-message" class="text-red-300 text-sm mt-1"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Section -->
+        <div id="result-section" class="hidden">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined text-secondary">check_circle</span>
+                <h2 class="text-xl font-bold text-on-surface">生成结果</h2>
+            </div>
+
+            <div id="result-list" class="space-y-4">
+                <!-- 方案卡片将动态插入 -->
+            </div>
+
+            <div class="flex flex-wrap gap-3 mt-6">
+                <button onclick="copyAllResults()" class="btn-secondary px-5 py-3 rounded-xl font-medium text-on-surface flex items-center gap-2">
+                    <span class="material-symbols-outlined">content_copy</span> 复制全部
+                </button>
+                <button onclick="exportResult('docx')" class="btn-secondary px-5 py-3 rounded-xl font-medium text-on-surface flex items-center gap-2">
+                    <span class="material-symbols-outlined">description</span> 导出 Word
+                </button>
+                <button onclick="exportResult('pdf')" class="btn-secondary px-5 py-3 rounded-xl font-medium text-on-surface flex items-center gap-2">
+                    <span class="material-symbols-outlined">picture_as_pdf</span> 导出 PDF
+                </button>
+                <button onclick="generateCopywriting()" class="btn-primary px-6 py-3 rounded-xl font-semibold flex items-center gap-2">
+                    <span class="material-symbols-outlined">refresh</span> 重新生成
+                </button>
+            </div>
+
+            <div id="export-preview" class="hidden mt-6">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-lg font-semibold text-on-surface flex items-center gap-2">
+                        <span class="material-symbols-outlined text-secondary">preview</span> 文档预览
+                    </h3>
+                    <a id="export-download-link" href="#" download class="btn-primary px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1">
+                        <span class="material-symbols-outlined text-base">download</span> 下载
+                    </a>
+                </div>
+                <div class="result-card rounded-2xl p-4">
+                    <iframe id="export-iframe" class="w-full rounded-lg" style="height: 600px; background: white;"></iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="relative z-10 border-t border-white/5 py-8 mt-12">
+            <div class="text-center text-on-surface-variant text-sm">
+                <p>© 2024 AI助手 - 智能文案生成工具</p>
+            </div>
+        </footer>
+    </div>
+
+    {% include "_settings_modal.html" %}
+
+    <script src="/static/js/utils.js"></script>
+    <script>
+        // p5.js Particle System
+        let particles = [];
+        const particleCount = 40;
+        class Particle {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = random(width); this.y = random(height);
+                this.size = random(1, 2.5);
+                this.speedX = random(-0.2, 0.2); this.speedY = random(-0.2, 0.2);
+                this.opacity = random(80, 150);
+                this.color = random(['#4cd7f6', '#c0c1ff']);
+            }
+            update() { this.x += this.speedX; this.y += this.speedY; if (this.x < 0 || this.x > width || this.y < 0 || this.y > height) this.reset(); }
+            draw() { noStroke(); fill(this.color + hex(floor(this.opacity), 2)); circle(this.x, this.y, this.size); }
+        }
+        function setup() { const c = createCanvas(windowWidth, windowHeight); c.parent('p5-canvas'); for (let i = 0; i < particleCount; i++) particles.push(new Particle()); }
+        function draw() { clear(); for (let i = 0; i < particles.length; i++) for (let j = i + 1; j < particles.length; j++) { const d = dist(particles[i].x, particles[i].y, particles[j].x, particles[j].y); if (d < 120) { stroke(76, 215, 246, map(d, 0, 120, 30, 0)); strokeWeight(0.5); line(particles[i].x, particles[i].y, particles[j].x, particles[j].y); } } particles.forEach(p => { p.update(); p.draw(); }); }
+        function windowResized() { resizeCanvas(windowWidth, windowHeight); }
+
+        let selectedStyle = '';
+        let currentResultText = '';
+        let currentSchemes = [];
+        const TOOL_NAME = 'copywriting';
+
+        function selectStyle(btn) {
+            document.querySelectorAll('.style-tag').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedStyle = btn.dataset.style;
+        }
+
+        async function generateCopywriting() {
+            const scene = document.getElementById('scene-input').value.trim();
+            const count = document.getElementById('count-select').value;
+            if (!scene) { showError('请输入场景描述'); return; }
+            hideError(); hideResult(); hideExportPreview();
+            showLoading();
+            try {
+                const response = await fetch('/api/copywriting/generate', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scene, style: selectedStyle || '默认风格', count: parseInt(count) }),
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    let results = data.result || data.copywriting || data.results || [];
+                    if (typeof results === 'string') results = [results];
+                    showResults(results);
+                    saveHistory({
+                        tool: TOOL_NAME,
+                        title: '文案生成 - ' + (selectedStyle || '默认') + ' - ' + new Date().toLocaleString('zh-CN'),
+                        input_text: scene,
+                        output_text: currentResultText,
+                        meta: { style: selectedStyle || '默认', count: parseInt(count) },
+                    });
+                } else {
+                    showError(data.error || '生成失败，请稍后重试');
+                }
+            } catch (e) {
+                showError('网络错误，请检查后端服务是否运行在 localhost:5001');
+            } finally { hideLoading(); }
+        }
+
+        function clearInput() {
+            document.getElementById('scene-input').value = '';
+            document.getElementById('count-select').value = '5';
+            document.querySelectorAll('.style-tag').forEach(b => b.classList.remove('selected'));
+            selectedStyle = '';
+            hideResult();
+            hideExportPreview();
+            hideError();
+        }
+
+        function showLoading() { document.getElementById('loading-state').classList.remove('hidden'); document.getElementById('generate-btn').disabled = true; }
+        function hideLoading() { document.getElementById('loading-state').classList.add('hidden'); document.getElementById('generate-btn').disabled = false; }
+        function hideResult() { document.getElementById('result-section').classList.add('hidden'); }
+        function showError(message) { document.getElementById('error-message').textContent = message; document.getElementById('error-state').classList.remove('hidden'); }
+        function hideError() { document.getElementById('error-state').classList.add('hidden'); }
+
+        function showResults(results) {
+            const container = document.getElementById('result-list');
+            container.innerHTML = '';
+            currentSchemes = [];
+
+            let content = '';
+            if (Array.isArray(results)) content = results.join('\n\n');
+            else if (typeof results === 'string') content = results;
+
+            currentResultText = content;
+            const schemes = parseMarkdownSchemes(content);
+            currentSchemes = schemes;
+
+            if (schemes.length === 0) {
+                const card = document.createElement('div');
+                card.className = 'result-card scheme-card rounded-2xl p-6';
+                card.innerHTML = `<div class="markdown-content">${renderMarkdown(content)}</div>`;
+                container.appendChild(card);
+            } else {
+                schemes.forEach((scheme, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'result-card scheme-card rounded-2xl p-6';
+                    card.innerHTML = `
+                        <div class="flex items-start gap-4">
+                            <span class="flex-shrink-0 w-8 h-8 rounded-full bg-secondary/20 text-secondary flex items-center justify-center text-sm font-bold">${index + 1}</span>
+                            <div class="flex-grow min-w-0">
+                                <h3 class="text-lg font-bold text-secondary mb-3">${escapeHtml(scheme.title || '方案')}</h3>
+                                <div class="markdown-content">${renderMarkdown(scheme.content)}</div>
+                                <button onclick="copyScheme(${index})" class="mt-3 text-secondary text-sm flex items-center gap-1 hover:underline">
+                                    <span class="material-symbols-outlined text-base">content_copy</span>
+                                    复制此方案
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+
+            document.getElementById('result-section').classList.remove('hidden');
+        }
+
+        function parseMarkdownSchemes(text) {
+            if (!text) return [];
+            // 匹配 "### 方案X" "## 方案X" "# 方案X" "方案X：" 等形式作为分界
+            const splitRegex = /(#{1,3}\s*方案[\u4e00-\u9fa5\d]+[^\n]*|方案[\u4e00-\u9fa5\d]+[:：][^\n]*)/g;
+            const parts = text.split(splitRegex);
+            const schemes = [];
+            let hasHeading = false;
+
+            for (let i = 0; i < parts.length; i++) {
+                let part = parts[i];
+                if (!part) continue;
+                if (/^(#{1,3}\s*方案|方案[\u4e00-\u9fa5\d]+[:：])/.test(part)) {
+                    hasHeading = true;
+                    let title = part.replace(/^#{1,3}\s*/, '').trim();
+                    // 去除末尾冒号
+                    title = title.replace(/[:：]\s*$/, '');
+                    schemes.push({ title, content: '' });
+                } else if (hasHeading && schemes.length > 0) {
+                    // 去除残留的分隔线 ---
+                    part = part.replace(/^---\s*$/gm, '').replace(/^\s*---\s*$/gm, '').trim();
+                    if (part) {
+                        schemes[schemes.length - 1].content += (schemes[schemes.length - 1].content ? '\n\n' : '') + part;
+                    }
+                }
+            }
+
+            // 如果没有按方案切分，按空行分段
+            if (schemes.length === 0 && text.trim()) {
+                const paras = text.split(/\n\s*\n+/).map(p => p.trim()).filter(Boolean);
+                const chineseNums = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+                paras.forEach((p, i) => {
+                    schemes.push({ title: `方案${chineseNums[i] || (i + 1)}`, content: p });
+                });
+            }
+
+            // 清理每个方案内容
+            schemes.forEach(s => {
+                s.content = s.content.replace(/^---\s*$/gm, '').trim();
+            });
+
+            return schemes;
+        }
+
+        function copyScheme(index) {
+            const scheme = currentSchemes[index];
+            if (scheme) {
+                const text = `${scheme.title}\n\n${scheme.content}`;
+                copyText(text);
+            }
+        }
+
+        function copyAllResults() {
+            if (currentSchemes.length > 0) {
+                const text = currentSchemes.map((s, i) => `【${s.title || `方案${i + 1}`}】\n\n${s.content}`).join('\n\n---\n\n');
+                copyText(text);
+            } else {
+                copyText(currentResultText);
+            }
+        }
+
+        async function exportResult(format) {
+            // 把所有方案合并为一个 Markdown 文档
+            let md = '';
+            if (currentSchemes.length > 0) {
+                md = currentSchemes.map(s => `## ${s.title}\n\n${s.content}`).join('\n\n');
+            } else {
+                md = currentResultText;
+            }
+            await exportAndPreview(format, md, '文案方案合集');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initHistorySidebar(TOOL_NAME);
+        });
+    </script>
+
+    {% include "_history_sidebar.html" %}
+</body>
+</html>

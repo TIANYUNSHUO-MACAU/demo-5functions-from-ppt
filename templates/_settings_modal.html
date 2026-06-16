@@ -1,0 +1,83 @@
+<!-- ScholarAI 设置面板 - API 配置 -->
+<div id="settings-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center">
+    <!-- 遮罩 -->
+    <div class="absolute inset-0 bg-inverse-surface/40 backdrop-blur-sm" onclick="toggleSettings()"></div>
+    <!-- 弹窗 -->
+    <div class="relative bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+        <!-- 标题栏 -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-outline-variant">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary">settings</span>
+                <h2 class="text-lg font-semibold text-on-surface">AI 模型配置</h2>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <span id="cfg-status-dot" class="w-2 h-2 rounded-full bg-outline"></span>
+                    <span id="cfg-status-text" class="text-xs text-on-surface-variant">未配置</span>
+                </div>
+                <button onclick="toggleSettings()" class="p-1 hover:bg-surface-container rounded-lg transition-colors">
+                    <span class="material-symbols-outlined text-on-surface-variant">close</span>
+                </button>
+            </div>
+        </div>
+        <!-- 表单 -->
+        <div class="p-6 space-y-5">
+            <!-- 预设选择 -->
+            <div>
+                <label class="block text-sm font-medium text-on-surface mb-2">模型供应商</label>
+                <select id="cfg-provider" onchange="onProviderChange()" class="w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 text-on-surface focus:ring-1 focus:ring-primary focus:border-primary text-sm">
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="openai">OpenAI (官方)</option>
+                    <option value="zhipu">智谱 AI (GLM)</option>
+                    <option value="moonshot">Moonshot (Kimi)</option>
+                    <option value="custom">自定义</option>
+                </select>
+            </div>
+            <!-- API Key -->
+            <div>
+                <label class="block text-sm font-medium text-on-surface mb-2">API Key</label>
+                <input id="cfg-api-key" type="password" placeholder="sk-..." class="w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/50 focus:ring-1 focus:ring-primary focus:border-primary text-sm font-mono"/>
+            </div>
+            <!-- Base URL -->
+            <div>
+                <label class="block text-sm font-medium text-on-surface mb-2">API Base URL</label>
+                <input id="cfg-api-base" type="text" placeholder="https://api.deepseek.com/v1" class="w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/50 focus:ring-1 focus:ring-primary focus:border-primary text-sm font-mono"/>
+            </div>
+            <!-- Model -->
+            <div>
+                <label class="block text-sm font-medium text-on-surface mb-2">模型名称</label>
+                <input id="cfg-model" type="text" placeholder="deepseek-chat" class="w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/50 focus:ring-1 focus:ring-primary focus:border-primary text-sm font-mono"/>
+            </div>
+        </div>
+        <!-- 底部按钮 -->
+        <div class="flex items-center justify-between px-6 py-4 border-t border-outline-variant bg-surface-container-low">
+            <button id="cfg-test-btn" onclick="testConfig()" class="px-4 py-2 text-sm text-primary border border-primary rounded-xl hover:bg-primary-fixed transition-colors">
+                测试连接
+            </button>
+            <div class="flex gap-3">
+                <button onclick="toggleSettings()" class="px-4 py-2 text-sm text-on-surface-variant hover:bg-surface-container rounded-xl transition-colors">
+                    取消
+                </button>
+                <button onclick="saveConfig()" class="px-5 py-2 text-sm bg-primary text-on-primary rounded-xl hover:opacity-90 active:scale-95 transition-all">
+                    保存配置
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const PROVIDERS = {
+    deepseek: { base: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+    openai: { base: 'https://api.openai.com/v1', model: 'gpt-3.5-turbo' },
+    zhipu: { base: 'https://open.bigmodel.cn/api/paas/v4/', model: 'glm-4-flash' },
+    moonshot: { base: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
+    custom: { base: '', model: '' },
+};
+function onProviderChange() {
+    const sel = document.getElementById('cfg-provider');
+    const p = PROVIDERS[sel.value] || PROVIDERS.custom;
+    document.getElementById('cfg-api-base').value = p.base;
+    document.getElementById('cfg-model').value = p.model;
+}
+</script>

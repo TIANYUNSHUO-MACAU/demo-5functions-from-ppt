@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>PDF摘要 - AI助手</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Geist:wght@400;600;700&display=swap" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#c0c1ff", secondary: "#4cd7f6", tertiary: "#ffdcc5",
+                        surface: "#131317", "surface-container": "#1f1f27",
+                        "on-surface": "#e4e1ed", "on-surface-variant": "#c7c4d7",
+                        "on-primary": "#1000a9", "background": "#13131b",
+                    },
+                    fontFamily: { sans: ["Geist", "sans-serif"], mono: ["JetBrains Mono", "monospace"] },
+                },
+            },
+        }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Geist', sans-serif; background: #13131b; color: #e4e1ed; min-height: 100vh; }
+        #p5-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .glass-card { background: rgba(31, 31, 39, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .input-area { background: rgba(19, 19, 27, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.3s ease; }
+        .input-area:focus { border-color: rgba(192, 193, 255, 0.5); box-shadow: 0 0 20px rgba(192, 193, 255, 0.2); outline: none; }
+        .btn-primary { background: linear-gradient(135deg, #c0c1ff 0%, #a3a5ff 100%); color: #1000a9; transition: all 0.3s ease; }
+        .btn-primary:hover:not(:disabled) { transform: scale(1.02); box-shadow: 0 10px 30px rgba(192, 193, 255, 0.4); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-secondary { background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); transition: all 0.3s ease; }
+        .btn-secondary:hover { border-color: rgba(192, 193, 255, 0.5); background: rgba(192, 193, 255, 0.1); }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .result-card { background: rgba(19, 19, 27, 0.9); border: 1px solid rgba(192, 193, 255, 0.2); animation: fadeIn 0.5s ease; }
+        .dropzone { transition: all 0.3s ease; }
+        .dropzone:hover { border-color: #c0c1ff !important; background: rgba(192, 193, 255, 0.05); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .markdown-content h1, .markdown-content h2, .markdown-content h3, .markdown-content h4 { color: #c0c1ff; }
+        .markdown-content strong { color: #4cd7f6; }
+        .markdown-content blockquote { border-left: 2px solid #4cd7f6; padding-left: 12px; color: #c7c4d7; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div id="p5-canvas"></div>
+
+    <div class="relative z-10 max-w-5xl mx-auto px-4 py-8">
+        <!-- Navigation -->
+        <nav class="flex items-center justify-between mb-12">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                    <span class="material-symbols-outlined">auto_awesome</span>
+                </div>
+                <span class="text-xl font-bold text-on-surface">AI助手</span>
+            </a>
+            <div class="flex items-center gap-4">
+                <a href="/" class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1">
+                    <span class="material-symbols-outlined text-lg">home</span>
+                    <span>返回首页</span>
+                </a>
+                <span id="api-status-badge" class="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-yellow-500/10 border border-yellow-500/30 text-yellow-400" title="当前为模拟返回">
+                    <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
+                    <span id="api-status-text">未配置</span>
+                </span>
+                <button onclick="openSettings()" class="btn-secondary px-4 py-2 rounded-full text-sm font-medium text-on-surface flex items-center gap-2" title="配置 AI 模型与 API Key">
+                    <span class="material-symbols-outlined text-base">settings</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Page Header -->
+        <div class="mb-8">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-12 h-12 rounded-xl bg-secondary/20 flex items-center justify-center text-secondary">
+                    <span class="material-symbols-outlined text-2xl">picture_as_pdf</span>
+                </div>
+                <h1 class="text-3xl font-bold text-on-surface">文档智能摘要</h1>
+            </div>
+            <p class="text-on-surface-variant">上传 PDF / Word / TXT 文件，或直接粘贴文本，AI 将自动生成结构化摘要</p>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="glass-card rounded-2xl p-8 mb-8">
+            <div id="pdf-dropzone" class="dropzone border-2 border-dashed border-outline-variant rounded-xl p-8 mb-6 text-center cursor-pointer hover:border-primary">
+                <input type="file" id="pdf-file" class="hidden" accept=".pdf,.docx,.doc,.txt">
+                <div id="pdf-upload-default">
+                    <span class="material-symbols-outlined text-5xl text-primary mb-2">upload_file</span>
+                    <p class="text-on-surface font-medium mb-1">点击或拖拽文件到此处</p>
+                    <p class="text-on-surface-variant text-sm">支持 PDF / Word / TXT</p>
+                </div>
+                <div id="pdf-upload-success" class="hidden">
+                    <span class="material-symbols-outlined text-3xl text-secondary mb-2">check_circle</span>
+                    <p id="pdf-filename" class="text-on-surface font-medium"></p>
+                    <p class="text-on-surface-variant text-sm mt-1">文件已加载</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 mb-6">
+                <div class="flex-grow h-px bg-white/10"></div>
+                <span class="text-on-surface-variant text-sm">或</span>
+                <div class="flex-grow h-px bg-white/10"></div>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-on-surface mb-3">粘贴文本内容</label>
+                <textarea id="text-input" class="input-area w-full h-40 rounded-xl p-4 text-on-surface placeholder-on-surface-variant resize-none" placeholder="直接粘贴文档中的文本内容..."></textarea>
+            </div>
+
+            <div class="flex flex-wrap gap-4">
+                <button id="summarize-btn" onclick="summarizePDF()" class="btn-primary px-8 py-3 rounded-xl font-semibold flex items-center gap-2">
+                    <span class="material-symbols-outlined">summarize</span>
+                    生成摘要
+                </button>
+                <button onclick="clearInput()" class="btn-secondary px-8 py-3 rounded-xl font-semibold text-on-surface">清空</button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="hidden glass-card rounded-2xl p-8 mb-8 text-center">
+            <div class="inline-block w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p class="text-on-surface">AI正在生成摘要中...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="hidden glass-card rounded-2xl p-6 mb-8 border border-red-500/30">
+            <div class="flex items-start gap-3">
+                <span class="material-symbols-outlined text-red-400">error</span>
+                <div>
+                    <p class="text-red-400 font-medium">出错了</p>
+                    <p id="error-message" class="text-red-300 text-sm mt-1"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Section -->
+        <div id="result-section" class="hidden">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined text-secondary">check_circle</span>
+                <h2 class="text-xl font-bold text-on-surface">文档摘要</h2>
+            </div>
+            <div class="result-card rounded-2xl p-6 md:p-8">
+                <div id="result-content" class="text-on-surface leading-relaxed"></div>
+            </div>
+
+            <div class="flex flex-wrap gap-3 mt-6">
+                <button onclick="copyResult()" class="btn-secondary px-5 py-3 rounded-xl font-medium text-on-surface flex items-center gap-2">
+                    <span class="material-symbols-outlined">content_copy</span> 复制
+                </button>
+                <button onclick="exportResult('docx')" class="btn-secondary px-5 py-3 rounded-xl font-medium text-on-surface flex items-center gap-2">
+                    <span class="material-symbols-outlined">description</span> 导出 Word
+                </button>
+                <button onclick="exportResult('pdf')" class="btn-secondary px-5 py-3 rounded-xl font-medium text-on-surface flex items-center gap-2">
+                    <span class="material-symbols-outlined">picture_as_pdf</span> 导出 PDF
+                </button>
+                <button onclick="summarizePDF()" class="btn-primary px-6 py-3 rounded-xl font-semibold flex items-center gap-2">
+                    <span class="material-symbols-outlined">refresh</span> 重新生成
+                </button>
+            </div>
+
+            <div id="export-preview" class="hidden mt-6">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-lg font-semibold text-on-surface flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">preview</span> 文档预览
+                    </h3>
+                    <a id="export-download-link" href="#" download class="btn-primary px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1">
+                        <span class="material-symbols-outlined text-base">download</span> 下载
+                    </a>
+                </div>
+                <div class="result-card rounded-2xl p-4">
+                    <iframe id="export-iframe" class="w-full rounded-lg" style="height: 600px; background: white;"></iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="relative z-10 border-t border-white/5 py-8 mt-12">
+            <div class="text-center text-on-surface-variant text-sm">
+                <p>© 2024 AI助手 - PDF摘要工具</p>
+            </div>
+        </footer>
+    </div>
+
+    {% include "_settings_modal.html" %}
+
+    <script src="/static/js/utils.js"></script>
+    <script>
+        // p5.js Particle System
+        let particles = [];
+        const particleCount = 40;
+        class Particle {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = random(width); this.y = random(height);
+                this.size = random(1, 2.5);
+                this.speedX = random(-0.2, 0.2); this.speedY = random(-0.2, 0.2);
+                this.opacity = random(80, 150);
+                this.color = random(['#c0c1ff', '#4cd7f6']);
+            }
+            update() { this.x += this.speedX; this.y += this.speedY; if (this.x < 0 || this.x > width || this.y < 0 || this.y > height) this.reset(); }
+            draw() { noStroke(); fill(this.color + hex(floor(this.opacity), 2)); circle(this.x, this.y, this.size); }
+        }
+        function setup() { const c = createCanvas(windowWidth, windowHeight); c.parent('p5-canvas'); for (let i = 0; i < particleCount; i++) particles.push(new Particle()); }
+        function draw() { clear(); for (let i = 0; i < particles.length; i++) for (let j = i + 1; j < particles.length; j++) { const d = dist(particles[i].x, particles[i].y, particles[j].x, particles[j].y); if (d < 120) { stroke(192, 193, 255, map(d, 0, 120, 30, 0)); strokeWeight(0.5); line(particles[i].x, particles[i].y, particles[j].x, particles[j].y); } } particles.forEach(p => { p.update(); p.draw(); }); }
+        function windowResized() { resizeCanvas(windowWidth, windowHeight); }
+
+        let selectedFile = null;
+        let currentResultText = '';
+        const TOOL_NAME = 'pdf_summary';
+
+        function handleFileSelect(file) {
+            const allowed = ['.pdf', '.docx', '.doc', '.txt'];
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+            if (!allowed.includes(ext)) { showError('不支持的文件格式：' + ext); return; }
+            if (file.size > 20 * 1024 * 1024) { showError('文件超过 20MB 限制'); return; }
+            selectedFile = file;
+            showUploadSuccess('pdf-upload-default', 'pdf-upload-success', 'pdf-filename', file.name);
+            hideError();
+        }
+
+        function clearPDFFile() {
+            selectedFile = null;
+            document.getElementById('pdf-file').value = '';
+            clearUpload('pdf-upload-default', 'pdf-upload-success');
+        }
+
+        async function summarizePDF() {
+            const text = document.getElementById('text-input').value.trim();
+            if (!text && !selectedFile) { showError('请上传文件或输入文本'); return; }
+            hideError(); hideResult(); hideExportPreview();
+            showLoading();
+            try {
+                let response, data;
+                if (selectedFile) {
+                    const fd = new FormData(); fd.append('file', selectedFile);
+                    response = await fetch('/api/pdf/upload', { method: 'POST', body: fd });
+                } else {
+                    response = await fetch('/api/pdf/summarize', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text }),
+                    });
+                }
+                data = await response.json();
+                if (response.ok) {
+                    currentResultText = data.result || data.summary || data.text || '';
+                    showResult(currentResultText);
+                    saveHistory({
+                        tool: TOOL_NAME,
+                        title: 'PDF摘要 - ' + (selectedFile ? selectedFile.name : '文本') + ' - ' + new Date().toLocaleString('zh-CN'),
+                        input_text: data.source || text || (selectedFile ? selectedFile.name : ''),
+                        output_text: currentResultText,
+                        meta: { source: selectedFile ? 'file' : 'text' },
+                    });
+                } else {
+                    showError(data.error || '摘要生成失败');
+                }
+            } catch (e) { showError('网络错误，请检查后端服务是否运行在 localhost:5001'); }
+            finally { hideLoading(); }
+        }
+
+        function clearInput() {
+            document.getElementById('text-input').value = '';
+            clearPDFFile();
+            hideResult(); hideExportPreview(); hideError();
+        }
+        function showLoading() { document.getElementById('loading-state').classList.remove('hidden'); document.getElementById('summarize-btn').disabled = true; }
+        function hideLoading() { document.getElementById('loading-state').classList.add('hidden'); document.getElementById('summarize-btn').disabled = false; }
+        function showResult(content) { document.getElementById('result-content').innerHTML = renderMarkdown(content); document.getElementById('result-section').classList.remove('hidden'); }
+        function hideResult() { document.getElementById('result-section').classList.add('hidden'); }
+        function showError(message) { document.getElementById('error-message').textContent = message; document.getElementById('error-state').classList.remove('hidden'); }
+        function hideError() { document.getElementById('error-state').classList.add('hidden'); }
+        function copyResult() { if (currentResultText) copyText(currentResultText); }
+        async function exportResult(format) { await exportAndPreview(format, currentResultText, 'PDF摘要'); }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initFileUpload({
+                dropzoneId: 'pdf-dropzone', fileInputId: 'pdf-file',
+                defaultId: 'pdf-upload-default', successId: 'pdf-upload-success',
+                filenameId: 'pdf-filename', onSelect: handleFileSelect,
+            });
+            initHistorySidebar(TOOL_NAME);
+        });
+    </script>
+
+    {% include "_history_sidebar.html" %}
+</body>
+</html>

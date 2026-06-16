@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html class="light" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>ScholarAI - 学术极简智能助手</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "outline": "#737872",
+                        "surface": "#fcf9f8",
+                        "surface-tint": "#506354",
+                        "secondary-container": "#fcdccb",
+                        "error": "#ba1a1a",
+                        "primary-container": "#4a5d4e",
+                        "on-surface": "#1c1b1b",
+                        "surface-container-highest": "#e5e2e1",
+                        "outline-variant": "#c3c8c1",
+                        "primary-fixed-dim": "#b7ccb9",
+                        "primary-fixed": "#d3e8d5",
+                        "surface-container-high": "#ebe7e7",
+                        "on-background": "#1c1b1b",
+                        "tertiary": "#553a3e",
+                        "on-secondary": "#ffffff",
+                        "primary": "#334537",
+                        "on-primary": "#ffffff",
+                        "surface-container-low": "#f6f3f2",
+                        "on-primary-container": "#c0d5c2",
+                        "secondary": "#715a4c",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container": "#f0edec",
+                        "on-error": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "surface-variant": "#e5e2e1",
+                        "error-container": "#ffdad6",
+                        "on-surface-variant": "#434843",
+                        "background": "#fcf9f8",
+                        "inverse-surface": "#313030",
+                        "inverse-on-surface": "#f3f0ef",
+                        "on-secondary-container": "#775f52",
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "3xl": "1.5rem",
+                    },
+                    fontFamily: {
+                        sans: ["Geist", "-apple-system", "PingFang SC", "Microsoft YaHei", "Segoe UI", "sans-serif"],
+                        mono: ["JetBrains Mono", "SF Mono", "Cascadia Code", "Consolas", "monospace"],
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        body { 
+            font-family: 'Geist', -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            background-color: #fcf9f8;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .paper-view {
+            box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.04);
+            border: 1px solid #c3c8c1;
+            background: #ffffff;
+            padding: 2.5rem;
+            min-height: 500px;
+        }
+        .resume-paper {
+            box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.04);
+            border: 1px solid #c3c8c1;
+            background: #ffffff;
+            padding: 2.5rem;
+            min-height: 297mm;
+        }
+        .scheme-card {
+            box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.04);
+            border: 1px solid #c3c8c1;
+            background: #ffffff;
+            transition: all 0.2s ease;
+        }
+        .scheme-card:hover {
+            border-color: #334537;
+        }
+        /* 为所有按钮和可交互元素注入平滑过渡效果 */
+        button, select, .style-tag, .nav-tab {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+
+        .style-tag:hover:not(.selected) {
+            background-color: #f0edec !important;
+            border-color: #334537 !important;
+            color: #334537 !important;
+            transform: translateY(-2px) scale(1.03) !important;
+            box-shadow: 0 4px 12px rgba(51, 69, 55, 0.08) !important;
+        }
+        .style-tag.selected {
+            background-color: #334537 !important;
+            color: #ffffff !important;
+            border-color: #334537 !important;
+        }
+        .style-tag.selected:hover {
+            transform: translateY(-2px) scale(1.03) !important;
+            box-shadow: 0 6px 16px rgba(51, 69, 55, 0.2) !important;
+        }
+        
+        select:hover {
+            border-color: #334537 !important;
+            background-color: #fcf9f8 !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+        }
+        
+        /* 针对“清空”、“润色”等轻量按钮增加 hover 边框变色和浮起 */
+        button.transition-colors:hover, button.transition-all:hover {
+            border-color: #334537 !important;
+            color: #334537 !important;
+            background-color: #f0edec !important;
+            transform: translateY(-2px) scale(1.03) !important;
+            box-shadow: 0 4px 12px rgba(51, 69, 55, 0.08) !important;
+        }
+        
+        /* 针对带回形针图标和设置图标的圆形小按钮 */
+        button.rounded-full:hover {
+            background-color: #f0edec !important;
+            color: #334537 !important;
+            transform: scale(1.08) !important;
+            box-shadow: 0 4px 12px rgba(51, 69, 55, 0.08) !important;
+        }
+        
+        /* 针对发送箭头圆形大按钮 */
+        button.bg-primary:hover:not(:disabled) {
+            opacity: 0.95 !important;
+            transform: scale(1.08) translateY(-2px) !important;
+            box-shadow: 0 6px 16px rgba(51, 69, 55, 0.25) !important;
+        }
+
+        /* 针对常规功能性图标、卡片和查看结果等 rounded-lg 按钮 */
+        button.rounded-lg:hover {
+            background-color: #f0edec !important;
+            color: #334537 !important;
+            transform: translateY(-2px) scale(1.03) !important;
+            box-shadow: 0 4px 12px rgba(51, 69, 55, 0.08) !important;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'JetBrains Mono', 'SF Mono', monospace;
+            font-size: 13px;
+        }
+        .data-table th {
+            background-color: #f0edec;
+            color: #334537;
+            font-weight: 700;
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 1px solid #c3c8c1;
+        }
+        .data-table td {
+            padding: 10px 16px;
+            border-bottom: 1px solid #e5e2e1;
+            color: #1c1b1b;
+        }
+        .data-table tr:nth-child(even) {
+            background-color: #f6f3f2/50;
+        }
+        .data-table tr:hover td {
+            background-color: #f0edec;
+        }
+        .stat-card {
+            background-color: #f6f3f2;
+            border: 1px solid #c3c8c1;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #c3c8c1; border-radius: 10px; }
+        .chat-input-shadow {
+            box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.04);
+        }
+
+        /* 鼠标跟随微发光与3D旋转输入框样式 */
+        .interactive-input-box {
+            position: relative;
+            background-color: #ffffff;
+            overflow: hidden;
+            transform-style: preserve-3d;
+            transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.5s cubic-bezier(0.25, 1, 0.5, 1), border-color 0.3s;
+        }
+        .interactive-input-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle 160px at var(--mouse-x, 0px) var(--mouse-y, 0px), rgba(80, 99, 84, 0.06), transparent 80%);
+            pointer-events: none;
+            z-index: 0;
+            transition: opacity 0.3s;
+            opacity: 0;
+        }
+        .interactive-input-box:hover::before {
+            opacity: 1;
+        }
+
+        /* 左右面板过度类 */
+        .pane-transition {
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
+                        transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
+                        opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* SPA 板块切换过渡效果 */
+        .panel-section {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transform: scale(0.97) translateY(12px);
+            pointer-events: none;
+            transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .panel-section.active-panel {
+            position: absolute;
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            pointer-events: auto;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="text-on-surface overflow-hidden">
+<div class="flex h-screen overflow-hidden">
+    <!-- Left Sidebar (Desktop - Static & Always Present) -->
+    <aside class="hidden md:flex flex-col h-full w-64 bg-surface-container-low border-r border-outline-variant p-4 space-y-2 relative shrink-0 z-20">
+        <div class="flex items-center gap-3 mb-8 px-2">
+            <div class="w-8 h-8 bg-primary rounded flex items-center justify-center text-on-primary">
+                <span class="material-symbols-outlined text-[20px]">school</span>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold text-primary leading-none">ScholarAI</h1>
+                <p class="text-xs text-on-surface-variant opacity-70">学术极简主义</p>
+            </div>
+        </div>
+        
+        <!-- Navigation tab container -->
+        <nav class="relative flex-grow space-y-1 py-4 overflow-y-auto">
+            <!-- Sliding background indicator shadow -->
+            <div id="sidebar-indicator" class="absolute left-3 w-[calc(100%-1.5rem)] bg-surface-container-high border border-outline-variant rounded-lg transition-all duration-300 ease-out pointer-events-none z-0" style="height: 40px; top: 16px; opacity: 0; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);"></div>
+            
+            <!-- 文字增加 pl-9 以防止与滑块边缘太近 -->
+            <a onclick="navigateTab('dashboard', event)" data-tab="dashboard" class="nav-tab relative z-10 flex items-center gap-3 pl-9 pr-3 py-2.5 text-on-surface transition-all text-sm rounded-lg group cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">home</span>
+                <span class="truncate">首页</span>
+            </a>
+            <a onclick="navigateTab('resume', event)" data-tab="resume" class="nav-tab relative z-10 flex items-center gap-3 pl-9 pr-3 py-2.5 text-on-surface transition-all text-sm rounded-lg group cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">person_search</span>
+                <span class="truncate">简历优化</span>
+            </a>
+            <a onclick="navigateTab('copywriting', event)" data-tab="copywriting" class="nav-tab relative z-10 flex items-center gap-3 pl-9 pr-3 py-2.5 text-on-surface transition-all text-sm rounded-lg group cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">edit_note</span>
+                <span class="truncate">文案生成</span>
+            </a>
+            <a onclick="navigateTab('translate', event)" data-tab="translate" class="nav-tab relative z-10 flex items-center gap-3 pl-9 pr-3 py-2.5 text-on-surface transition-all text-sm rounded-lg group cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">translate</span>
+                <span class="truncate">翻译助手</span>
+            </a>
+            <a onclick="navigateTab('pdf', event)" data-tab="pdf" class="nav-tab relative z-10 flex items-center gap-3 pl-9 pr-3 py-2.5 text-on-surface transition-all text-sm rounded-lg group cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+                <span class="truncate">PDF 摘要</span>
+            </a>
+            <a onclick="navigateTab('csv', event)" data-tab="csv" class="nav-tab relative z-10 flex items-center gap-3 pl-9 pr-3 py-2.5 text-on-surface transition-all text-sm rounded-lg group cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">table_chart</span>
+                <span class="truncate">CSV 预览</span>
+            </a>
+        </nav>
+        
+        <div class="pt-4 border-t border-outline-variant space-y-1">
+            <button onclick="toggleHistorySidebar()" class="w-full text-left px-3 py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-lg transition-all text-sm flex items-center gap-3">
+                <span class="material-symbols-outlined text-[18px]">history</span>
+                <span>历史记录</span>
+            </button>
+            <button onclick="toggleSettings()" class="w-full text-left px-3 py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-lg transition-all text-sm flex items-center gap-3">
+                <span class="material-symbols-outlined text-[18px]">settings</span>
+                <span>设置</span>
+            </button>
+            <button onclick="window.open('https://github.com', '_blank')" class="w-full text-left px-3 py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-lg transition-all text-sm flex items-center gap-3">
+                <span class="material-symbols-outlined text-[18px]">help_outline</span>
+                <span>帮助</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Right Side View Container: Swaps Active Content Only -->
+    <div class="flex-grow h-full flex flex-col overflow-hidden relative bg-background">
+        
+        <!-- 1. Dashboard Panel -->
+        <section id="panel-dashboard" class="panel-section flex flex-col h-full w-full">
+            <header class="flex justify-between items-center w-full px-8 py-4 bg-background z-20 border-b border-outline-variant/30 md:border-none">
+                <div class="flex items-center gap-4">
+                    <span class="text-xl font-semibold text-primary">ScholarAI</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSettings()" class="p-2 text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 rounded-lg">
+                        <span class="material-symbols-outlined">settings</span>
+                    </button>
+                </div>
+            </header>
+            <div class="flex-grow flex flex-col items-center justify-center px-4 overflow-y-auto pb-48">
+                <div class="max-w-3xl w-full text-center space-y-8">
+                    <div class="space-y-4">
+                        <h2 class="text-3xl md:text-4xl text-primary tracking-tight font-semibold">今天我能帮你做些什么？</h2>
+                        <p class="text-base text-on-surface-variant max-w-lg mx-auto opacity-80 leading-relaxed">
+                            ScholarAI 结合深度分析与学术精度，帮你构建更好的创意与研究成果。
+                        </p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-12 text-left">
+                        <a onclick="navigateTab('resume')" class="p-5 bg-surface-container-lowest border border-outline-variant rounded-xl hover:border-primary hover:bg-surface-container-low/20 transition-all block group cursor-pointer">
+                            <span class="material-symbols-outlined text-primary mb-3 block">person_search</span>
+                            <h3 class="font-bold text-on-surface group-hover:text-primary mb-1">简历优化</h3>
+                            <p class="text-sm text-on-surface-variant">智能优化您的简历内容，突出核心优势，适配特定岗位的需求。</p>
+                        </a>
+                        <a onclick="navigateTab('csv')" class="p-5 bg-surface-container-lowest border border-outline-variant rounded-xl hover:border-primary hover:bg-surface-container-low/20 transition-all block group cursor-pointer">
+                            <span class="material-symbols-outlined text-primary mb-3 block">table_chart</span>
+                            <h3 class="font-bold text-on-surface group-hover:text-primary mb-1">CSV 数据预览与分析</h3>
+                            <p class="text-sm text-on-surface-variant">上传数据表格，自动生成多维度的统计洞察，绘制出核心趋势报告。</p>
+                        </a>
+                        <a onclick="navigateTab('translate')" class="p-5 bg-surface-container-lowest border border-outline-variant rounded-xl hover:border-primary hover:bg-surface-container-low/20 transition-all block group cursor-pointer">
+                            <span class="material-symbols-outlined text-primary mb-3 block">translate</span>
+                            <h3 class="font-bold text-on-surface group-hover:text-primary mb-1">学术翻译与润色</h3>
+                            <p class="text-sm text-on-surface-variant">支持中英等多语种翻译及学术化论文润色，用词学术化、地道。</p>
+                        </a>
+                        <a onclick="navigateTab('pdf')" class="p-5 bg-surface-container-lowest border border-outline-variant rounded-xl hover:border-primary hover:bg-surface-container-low/20 transition-all block group cursor-pointer">
+                            <span class="material-symbols-outlined text-primary mb-3 block">picture_as_pdf</span>
+                            <h3 class="font-bold text-on-surface group-hover:text-primary mb-1">PDF 文档智能摘要</h3>
+                            <p class="text-sm text-on-surface-variant">上传 PDF/Word 论文，瞬间提取出研究背景、核心方法和实验结论。</p>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full p-4 md:p-8 flex justify-center bg-gradient-to-t from-background via-background to-transparent pointer-events-none">
+                <div class="max-w-3xl w-full pointer-events-auto">
+                    <div class="interactive-input-box border border-outline-variant rounded-[2rem] p-4 chat-input-shadow">
+                        <textarea id="quick-chat-input" class="w-full bg-transparent border-none focus:ring-0 resize-none min-h-[100px] text-sm text-on-surface placeholder:text-on-surface-variant placeholder:opacity-50" placeholder="向 ScholarAI 提问... 输入内容后按 Enter 发送，或选择下方快捷工具页进行专业操作"></textarea>
+                        <div class="flex flex-col md:flex-row justify-between items-center gap-4 mt-2 pt-4 border-t border-surface-container-high">
+                            <div class="flex flex-wrap gap-1 items-center overflow-x-auto max-w-full pb-1">
+                                <a onclick="navigateTab('resume')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors text-xs whitespace-nowrap cursor-pointer">
+                                    <span class="material-symbols-outlined text-[16px]">person_search</span>
+                                    <span>简历优化</span>
+                                </a>
+                                <a onclick="navigateTab('copywriting')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors text-xs whitespace-nowrap cursor-pointer">
+                                    <span class="material-symbols-outlined text-[16px]">edit_note</span>
+                                    <span>文案生成</span>
+                                </a>
+                                <a onclick="navigateTab('translate')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors text-xs whitespace-nowrap cursor-pointer">
+                                    <span class="material-symbols-outlined text-[16px]">translate</span>
+                                    <span>翻译助手</span>
+                                </a>
+                                <a onclick="navigateTab('pdf')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors text-xs whitespace-nowrap cursor-pointer">
+                                    <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                                    <span>PDF 摘要</span>
+                                </a>
+                                <a onclick="navigateTab('csv')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors text-xs whitespace-nowrap cursor-pointer">
+                                    <span class="material-symbols-outlined text-[16px]">table_chart</span>
+                                    <span>CSV 预览</span>
+                                </a>
+                            </div>
+                            <div class="flex items-center gap-3 ml-auto">
+                                <div onclick="toggleSettings()" class="flex items-center gap-2 px-3 py-1.5 bg-surface-container rounded-full border border-outline-variant cursor-pointer hover:border-primary transition-all">
+                                    <span class="font-mono text-[11px] text-primary">DeepSeek Chat</span>
+                                    <span class="material-symbols-outlined text-[14px] text-on-surface-variant">expand_more</span>
+                                </div>
+                                <button onclick="handleQuickSend()" class="w-10 h-10 bg-primary text-on-primary rounded-full flex items-center justify-center hover:opacity-90 active:scale-90 transition-all shadow-md">
+                                    <span class="material-symbols-outlined">arrow_upward</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Resume Optimization Panel -->
+        <section id="panel-resume" class="panel-section hidden flex flex-col h-full w-full overflow-hidden">
+            <div class="flex-grow flex overflow-hidden w-full h-full relative">
+                <!-- Left Pane: Chat & Input (takes full width initially) -->
+                <div id="resume-left-pane" class="pane-transition w-full h-full flex flex-col bg-background">
+                    <!-- Left Header -->
+                    <header class="flex justify-between items-center w-full px-6 py-4 bg-background border-b border-outline-variant/30 shrink-0">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary text-[20px]">person_search</span>
+                            <span class="font-bold text-on-surface text-sm">简历优化</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <!-- Toggle Results Button (hidden initially) -->
+                            <button id="resume-toggle-result-btn" onclick="toggleResultPanel('resume')" class="hidden flex items-center gap-1.5 px-3 py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-primary rounded-lg transition-colors text-xs font-semibold">
+                                <span class="material-symbols-outlined text-[16px]">visibility</span>
+                                <span id="resume-toggle-result-text">查看结果</span>
+                            </button>
+                            <button onclick="toggleHistorySidebar()" class="p-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors" title="历史记录">
+                                <span class="material-symbols-outlined text-[18px]">history</span>
+                            </button>
+                            <button onclick="toggleSettings()" class="p-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors" title="系统设置">
+                                <span class="material-symbols-outlined text-[18px]">settings</span>
+                            </button>
+                        </div>
+                    </header>
+                    <div id="resume-chat-messages" class="flex-grow overflow-y-auto p-6 space-y-6 max-w-3xl mx-auto w-full">
+                        <div class="flex flex-col items-start max-w-[90%]">
+                            <div class="flex items-center space-x-2 mb-1.5 text-primary">
+                                <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+                                <span class="text-xs font-semibold">ScholarAI</span>
+                            </div>
+                            <div class="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 text-sm leading-relaxed">
+                                请输入您的简历文本内容，或者点击左下角回形针图标上传简历文件（支持 PDF / Word / TXT）。
+                            </div>
+                        </div>
+                    </div>
+                    <div id="resume-loading-state" class="hidden px-6 py-3 bg-primary-fixed/50 border-t border-outline-variant flex items-center justify-between text-xs text-primary font-medium animate-pulse">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                            <span>正在进行 AI 深度优化分析，请稍候...</span>
+                        </div>
+                    </div>
+                    <div id="resume-error-state" class="hidden px-6 py-3 bg-error-container text-on-error-container border-t border-outline-variant text-xs flex items-center justify-between font-medium">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[16px]">error</span>
+                            <span id="resume-error-message"></span>
+                        </div>
+                        <button onclick="hideError('resume')" class="hover:opacity-85"><span class="material-symbols-outlined text-[16px]">close</span></button>
+                    </div>
+                    <div class="p-6 bg-background border-t border-outline-variant shrink-0">
+                        <div class="max-w-3xl mx-auto w-full">
+                            <!-- Unified Input Box with Integrated File Chip inside -->
+                            <div class="interactive-input-box border border-outline-variant rounded-[1.5rem] p-3 shadow-sm focus-within:ring-1 focus-within:ring-primary transition-all">
+                                <div id="resume-file-chip" class="hidden flex items-center justify-between bg-primary-fixed/40 border border-primary-fixed rounded-xl px-3 py-1.5 mb-2 max-w-xs text-xs">
+                                    <div class="flex items-center gap-1.5 truncate text-primary font-medium">
+                                        <span class="material-symbols-outlined text-[16px]">description</span>
+                                        <span id="resume-file-chip-name" class="truncate">filename.pdf</span>
+                                    </div>
+                                    <button onclick="clearFile('resume')" class="hover:bg-primary-fixed/60 rounded p-0.5 text-primary">
+                                        <span class="material-symbols-outlined text-[14px]">close</span>
+                                    </button>
+                                </div>
+                                <textarea id="resume-input" class="w-full bg-transparent border-none focus:ring-0 text-sm text-on-surface placeholder:text-on-surface-variant/40 resize-none min-h-[80px]" placeholder="在此粘贴您的简历内容，或描述您的优化目标..."></textarea>
+                                <div class="flex justify-between items-center pt-2 border-t border-surface-container-high">
+                                    <div class="flex items-center">
+                                        <button onclick="triggerUpload('resume')" class="p-2 hover:bg-surface-container rounded-full text-on-surface-variant transition-colors" title="上传简历文档 (.pdf, .docx, .doc, .txt)">
+                                            <span class="material-symbols-outlined text-[20px]">attach_file</span>
+                                        </button>
+                                        <input type="file" id="resume-file" class="hidden" accept=".pdf,.docx,.doc,.txt" onchange="handleFileChange('resume', this)"/>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="clearResumeInput()" class="px-3 py-1.5 text-xs border border-outline-variant rounded-xl hover:bg-surface-container transition-colors">清空</button>
+                                        <button id="resume-optimize-btn" onclick="optimizeResume()" class="bg-primary text-on-primary w-8 h-8 rounded-full flex items-center justify-center hover:opacity-90 active:scale-95 transition-all shadow">
+                                            <span class="material-symbols-outlined text-[18px]">arrow_upward</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Right Pane: Artifact Viewer (initially hidden w-0, pops out from bottom-right) -->
+                <div id="resume-right-pane" class="pane-transition w-0 h-full bg-background overflow-hidden flex flex-col transform translate-y-full opacity-0 pointer-events-none border-l border-outline-variant/30">
+                    <header class="flex justify-between items-center px-6 py-4 border-b border-outline-variant shrink-0">
+                        <div class="flex items-center space-x-3">
+                            <span class="material-symbols-outlined text-primary">description</span>
+                            <span class="text-sm font-bold text-on-surface">优化简历排版结果</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="copyResult(currentResumeText)" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant">
+                                <span class="material-symbols-outlined text-[18px]">content_copy</span><span class="text-xs">复制</span>
+                            </button>
+                            <button onclick="exportResult('docx', currentExportText, '优化简历')" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant">
+                                <span class="material-symbols-outlined text-[18px]">description</span><span class="text-xs">Word</span>
+                            </button>
+                            <button onclick="exportResult('pdf', currentExportText, '优化简历')" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant">
+                                <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span><span class="text-xs">PDF</span>
+                            </button>
+                            <button onclick="hideRightPanel('resume')" class="p-1.5 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant" title="收起面板">
+                                <span class="material-symbols-outlined text-[18px]">close</span>
+                            </button>
+                        </div>
+                    </header>
+                    <div class="flex-grow overflow-y-auto p-8 custom-scrollbar">
+                        <div id="resume-result-content" class="resume-paper markdown-content"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Copywriting Panel -->
+        <section id="panel-copywriting" class="panel-section hidden flex flex-col h-full w-full overflow-hidden">
+            <div class="flex-grow flex overflow-hidden w-full h-full relative">
+                <!-- Left Pane -->
+                <div id="copy-left-pane" class="pane-transition w-full h-full flex flex-col bg-background">
+                    <!-- Left Header -->
+                    <header class="flex justify-between items-center w-full px-6 py-4 bg-background border-b border-outline-variant/30 shrink-0">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary text-[20px]">edit_note</span>
+                            <span class="font-bold text-on-surface text-sm">文案生成</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <!-- Toggle Results Button (hidden initially) -->
+                            <button id="copy-toggle-result-btn" onclick="toggleResultPanel('copy')" class="hidden flex items-center gap-1.5 px-3 py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-primary rounded-lg transition-colors text-xs font-semibold">
+                                <span class="material-symbols-outlined text-[16px]">visibility</span>
+                                <span id="copy-toggle-result-text">查看结果</span>
+                            </button>
+                            <button onclick="toggleHistorySidebar()" class="p-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors" title="历史记录">
+                                <span class="material-symbols-outlined text-[18px]">history</span>
+                            </button>
+                            <button onclick="toggleSettings()" class="p-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors" title="系统设置">
+                                <span class="material-symbols-outlined text-[18px]">settings</span>
+                            </button>
+                        </div>
+                    </header>
+                    <div id="copy-chat-messages" class="flex-grow overflow-y-auto p-6 space-y-6 max-w-3xl mx-auto w-full">
+                        <div class="flex flex-col items-start max-w-[90%]">
+                            <div class="flex items-center space-x-2 mb-1.5 text-primary">
+                                <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+                                <span class="text-xs font-semibold">ScholarAI</span>
+                            </div>
+                            <div class="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 text-sm leading-relaxed">
+                                请输入您的场景描述，并在下方选择文案风格与生成数量。
+                            </div>
+                        </div>
+                    </div>
+                    <div id="copy-loading-state" class="hidden px-6 py-3 bg-primary-fixed/50 border-t border-outline-variant flex items-center justify-between text-xs text-primary font-medium animate-pulse">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                            <span>正在为您生成精彩文案方案，请稍候...</span>
+                        </div>
+                    </div>
+                    <div id="copy-error-state" class="hidden px-6 py-3 bg-error-container text-on-error-container border-t border-outline-variant text-xs flex items-center justify-between font-medium">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[16px]">error</span>
+                            <span id="copy-error-message"></span>
+                        </div>
+                        <button onclick="hideError('copy')" class="hover:opacity-85"><span class="material-symbols-outlined text-[16px]">close</span></button>
+                    </div>
+                    <div class="p-6 bg-background border-t border-outline-variant shrink-0">
+                        <div class="max-w-3xl mx-auto w-full space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-on-surface-variant mb-1.5">风格选择</label>
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" class="style-tag px-3 py-1.5 rounded-lg border border-outline-variant text-on-surface-variant text-xs" data-style="简洁有力" onclick="selectStyle(this)">简洁有力</button>
+                                    <button type="button" class="style-tag px-3 py-1.5 rounded-lg border border-outline-variant text-on-surface-variant text-xs" data-style="温暖亲和" onclick="selectStyle(this)">温暖亲和</button>
+                                    <button type="button" class="style-tag px-3 py-1.5 rounded-lg border border-outline-variant text-on-surface-variant text-xs" data-style="专业严谨" onclick="selectStyle(this)">专业严谨</button>
+                                    <button type="button" class="style-tag px-3 py-1.5 rounded-lg border border-outline-variant text-on-surface-variant text-xs" data-style="活泼有趣" onclick="selectStyle(this)">活泼有趣</button>
+                                    <button type="button" class="style-tag px-3 py-1.5 rounded-lg border border-outline-variant text-on-surface-variant text-xs" data-style="高端奢华" onclick="selectStyle(this)">高端奢华</button>
+                                </div>
+                            </div>
+                            
+                            <div class="interactive-input-box border border-outline-variant rounded-[1.5rem] p-3 shadow-sm focus-within:ring-1 focus-within:ring-primary transition-all">
+                                <textarea id="scene-input" class="w-full bg-transparent border-none focus:ring-0 text-sm text-on-surface placeholder:text-on-surface-variant/40 resize-none min-h-[80px]" placeholder="产品或推广场景描述，如：一款面向年轻人的运动饮料，主打提神抗疲劳..."></textarea>
+                                <div class="flex justify-between items-center pt-2 border-t border-surface-container-high">
+                                    <div class="flex items-center gap-2">
+                                        <label class="text-xs font-semibold text-on-surface-variant">条数</label>
+                                        <select id="count-select" class="bg-surface-container border border-outline-variant rounded-xl text-xs py-1 px-2 focus:ring-0">
+                                            <option value="3">3条</option>
+                                            <option value="5" selected>5条</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="clearCopyInput()" class="px-3 py-1.5 text-xs border border-outline-variant rounded-xl hover:bg-surface-container transition-colors">清空</button>
+                                        <button id="copy-generate-btn" onclick="generateCopywriting()" class="bg-primary text-on-primary w-8 h-8 rounded-full flex items-center justify-center hover:opacity-90 active:scale-95 transition-all shadow">
+                                            <span class="material-symbols-outlined text-[18px]">arrow_upward</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Right Pane -->
+                <div id="copy-right-pane" class="pane-transition w-0 h-full bg-background overflow-hidden flex flex-col transform translate-y-full opacity-0 pointer-events-none border-l border-outline-variant/30">
+                    <header class="flex justify-between items-center px-6 py-4 border-b border-outline-variant shrink-0">
+                        <div class="flex items-center space-x-3">
+                            <span class="material-symbols-outlined text-primary">edit_note</span>
+                            <span class="text-sm font-bold text-on-surface">AI 生成文案方案</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="copyAllCopyResults()" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant">
+                                <span class="material-symbols-outlined text-[18px]">content_copy</span><span class="text-xs">复制全部</span>
+                            </button>
+                            <button onclick="exportResult('docx', currentCopyResultText, '营销文案方案')" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant">
+                                <span class="material-symbols-outlined text-[18px]">description</span><span class="text-xs">Word</span>
+                            </button>
+                            <button onclick="exportResult('pdf', currentCopyResultText, '营销文案方案')" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant">
+                                <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span><span class="text-xs">PDF</span>
+                            </button>
+                            <button onclick="hideRightPanel('copy')" class="p-1.5 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant" title="收起面板">
+                                <span class="material-symbols-outlined text-[18px]">close</span>
+                            </button>
+                        </div>
+                    </header>
+                    <div class="flex-grow overflow-y-auto p-8 custom-scrollbar">
+                        <div id="copy-result-list" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Translation Assistant Panel -->
+        <section id="panel-translate" class="panel-section hidden flex flex-col h-full w-full overflow-hidden">
+            <div class="flex-grow flex overflow-hidden w-full h-full relative">
+                <!-- Left Pane -->
+                <div id="translate-left-pane" class="pane-transition w-full h-full flex flex-col bg-background">
+                    <!-- Left Header -->
+                    <header class="flex justify-between items-center w-full px-6 py-4 bg-background border-b border-outline-variant/30 shrink-0">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary text-[20px]">translate</span>
+                            <span class="font-bold text-on-surface text-sm">翻译助手</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <!-- Toggle Results Button (hidden initially) -->
+                            <button id="translate-toggle-result-btn" onclick="toggleResultPanel('translate')" class="hidden flex items-center gap-1.5 px-3 py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-primary rounded-lg transition-colors text-xs font-semibold">
+                                <span class="material-symbols-outlined text-[16px]">visibility</span>
+                                <span id="translate-toggle-result-text">查看结果</span>
+                            </button>
+                            <button onclick="toggleHistorySidebar()" class="p-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors" title="历史记录">
+                                <span class="material-symbols-outlined text-[18px]">history</span>
+                            </button>
+                            <button onclick="toggleSettings()" class="p-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors" title="系统设置">
+                                <span class="material-symbols-outlined text-[18px]">settings</span>
+                            </button>
+                        </div>
+                    </header>
+                    <div id="translate-chat-messages" class="flex-grow overflow-y-auto p-6 space-y-6 max-w-3xl mx-auto w-full">
+                        <div class="flex flex-col items-start max-w-[90%]">
+                            <div class="flex items-center space-x-2 mb-1.5 text-primary">
+                                <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+                                <span class="text-xs font-semibold">ScholarAI</span>
+                            </div>
+                            <div class="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 text-sm leading-relaxed">
+                                请输入要翻译或润色的文本内容，或者点击左下角图标上传翻译文件（支持 PDF / Word / TXT）。
+                            </div>
+                        </div>
+                    </div>
+                    <div id="translate-loading-state" class="hidden px-6 py-3 bg-primary-fixed/50 border-t border-outline-variant flex items-center justify-between text-xs text-primary font-medium animate-pulse">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                            <span>AI正在处理中，请稍候...</span>
+                        </div>
+                    </div>
+                    <div id="translate-error-state" class="hidden px-6 py-3 bg-error-container text-on-error-container border-t border-outline-variant text-xs flex items-center justify-between font-medium">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[16px]">error</span>
+                            <span id="translate-error-message"></span>
+                        </div>
+                        <button onclick="hideError('translate')" class="hover:opacity-85"><span class="material-symbols-outlined text-[16px]">close</span></button>
+                    </div>
+                    <div class="p-6 bg-background border-t border-outline-variant shrink-0">
+                        <div class="max-w-3xl mx-auto w-full">
+                            <div class="interactive-input-box border border-outline-variant rounded-[1.5rem] p-3 shadow-sm focus-within:ring-1 focus-within:ring-primary transition-all">
+                                <div id="translate-file-chip" class="hidden flex items-center justify-between bg-primary-fixed/40 border border-primary-fixed rounded-xl px-3 py-1.5 mb-2 max-w-xs text-xs">
+                                    <div class="flex items-center gap-1.5 truncate text-primary font-medium">
+                                        <span class="material-symbols-outlined text-[16px]">description</span>
+                                        <span id="translate-file-chip-name" class="truncate">filename.pdf</span>
+                                    </div>
+                                    <button onclick="clearFile('translate')" class="hover:bg-primary-fixed/60 rounded p-0.5 text-primary">
+                                        <span class="material-symbols-outlined text-[14px]">close</span>
+                                    </button>
+                                </div>
+                                <textarea id="translate-text-input" class="w-full bg-transparent border-none focus:ring-0 text-sm text-on-surface placeholder:text-on-surface-variant/40 resize-none min-h-[80px]" placeholder="在此输入需要翻译或润色的源文本内容..."></textarea>
+                                <div class="flex justify-between items-center pt-2 border-t border-surface-container-high">
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="triggerUpload('translate')" class="p-2 hover:bg-surface-container rounded-full text-on-surface-variant transition-colors" title="上传要翻译的源文档">
+                                            <span class="material-symbols-outlined text-[20px]">attach_file</span>
+                                        </button>
+                                        <input type="file" id="translate-file" class="hidden" accept=".pdf,.docx,.doc,.txt" onchange="handleFileChange('translate', this)"/>
+                                        
+                                        <label class="text-xs font-semibold text-on-surface-variant ml-2">目标语言</label>
+                                        <select id="target-lang" class="bg-surface-container border border-outline-variant rounded-xl text-xs py-1 px-2 focus:ring-0">
+                                            <option value="中文" selected>中文</option>
+                                            <option value="英文">英文 (English)</option>
+                                            <option value="日语">日语 (日本語)</option>
+                                            <option value="韩语">韩语 (한국어)</option>
+                                            <option value="德语">德语 (Deutsch)</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="clearTranslateInput()" class="px-3 py-1.5 text-xs border border-outline-variant rounded-xl hover:bg-surface-container transition-colors">清空</button>
+                                        <button onclick="polishText()" class="px-3 py-1.5 text-primary border border-primary font-semibold text-xs rounded-xl hover:bg-primary-fixed transition-colors">润色</button>
+                                        <button id="translate-submit-btn" onclick="translateText()" class="bg-primary text-on-primary w-8 h-8 rounded-full flex items-center justify-center hover:opacity-90 active:scale-95 transition-all shadow">
+                                            <span class="material-symbols-outlined text-[18px]">arrow_upward</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Right Pane -->
+                <div id="translate-right-pane" class="pane-transition w-0 h-full bg-background overflow-hidden flex flex-col transform translate-y-full opacity-0 pointer-events-none border-l border-outline-variant/30">
+                    <header class="flex justify-between items-center px-6 py-4 border-b border-outline-variant shrink-0">
+                        <div class="flex items-center space-x-3">
+                            <span class="material-symbols-outlined text-primary">translate</span>
+                            <span class="text-sm font-bold text-on-surface">翻译与润色成果</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="swapTranslateInputResult()" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant">
+                                <span class="material-symbols-outlined text-[18px]">swap_horiz</span><span class="text-xs">导入编辑</span>
+                            </button>
+                            <button onclick="copyResult(currentTranslateText)" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant">
+                                <span class="material-symbols-outlined text-[18px]">content_copy</span><span class="text-xs">复制</span>
+                            </button>
+                            <button onclick="exportResult('docx', currentTranslateExportText, '翻译成果')" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant">
+                                <span class="material-symbols-outlined text-[18px]">description</span><span class="text-xs">Word</span>
+                            </button>
+                            <button onclick="hideRightPanel('translate')" class="p-1.5 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant" title="收起面板">
+                                <span class="material-symbols-outlined text-[18px]">close</span>
+                            </button>
+                        </div>
+                    </header>
+                    <div class="flex-grow overflow-y-auto p-8 custom-scrollbar">
+                        <div id="translate-result-content" class="paper-view markdown-content text-sm leading-relaxed"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. PDF Summary Panel -->
+        <section id="panel-pdf" class="panel-section hidden flex flex-col h-full w-full overflow-hidden">
+            <div class="flex-grow flex overflow-hidden w-full h-full relative">
+                <!-- Left Pane -->
+                <div id="pdf-left-pane" class="pane-transition w-full h-full flex flex-col bg-background">
+                    <!-- Left Header -->
+                    <header class="flex justify-between items-center w-full px-6 py-4 bg-background border-b border-outline-variant/30 shrink-0">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary text-[20px]">picture_as_pdf</span>
+                            <span class="font-bold text-on-surface text-sm">PDF 摘要</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <!-- Toggle Results Button (hidden initially) -->
+                            <button id="pdf-toggle-result-btn" onclick="toggleResultPanel('pdf')" class="hidden flex items-center gap-1.5 px-3 py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-primary rounded-lg transition-colors text-xs font-semibold">
+                                <span class="material-symbols-outlined text-[16px]">visibility</span>
+                                <span id="pdf-toggle-result-text">查看结果</span>
+                            </button>
+                            <button onclick="toggleHistorySidebar()" class="p-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors" title="历史记录">
+                                <span class="material-symbols-outlined text-[18px]">history</span>
+                            </button>
+                            <button onclick="toggleSettings()" class="p-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors" title="系统设置">
+                                <span class="material-symbols-outlined text-[18px]">settings</span>
+                            </button>
+                        </div>
+                    </header>
+                    <div id="pdf-chat-messages" class="flex-grow overflow-y-auto p-6 space-y-6 max-w-3xl mx-auto w-full">
+                        <div class="flex flex-col items-start max-w-[90%]">
+                            <div class="flex items-center space-x-2 mb-1.5 text-primary">
+                                <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+                                <span class="text-xs font-semibold">ScholarAI</span>
+                            </div>
+                            <div class="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 text-sm leading-relaxed">
+                                请在下方粘贴需要提取摘要的文本，或者点击回形针图标上传 PDF / Word / TXT 文档文件。
+                            </div>
+                        </div>
+                    </div>
+                    <div id="pdf-loading-state" class="hidden px-6 py-3 bg-primary-fixed/50 border-t border-outline-variant flex items-center justify-between text-xs text-primary font-medium animate-pulse">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                            <span>正在深度解析文档并生成摘要报告，请稍候...</span>
+                        </div>
+                    </div>
+                    <div id="pdf-error-state" class="hidden px-6 py-3 bg-error-container text-on-error-container border-t border-outline-variant text-xs flex items-center justify-between font-medium">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[16px]">error</span>
+                            <span id="pdf-error-message"></span>
+                        </div>
+                        <button onclick="hideError('pdf')" class="hover:opacity-85"><span class="material-symbols-outlined text-[16px]">close</span></button>
+                    </div>
+                    <div class="p-6 bg-background border-t border-outline-variant shrink-0">
+                        <div class="max-w-3xl mx-auto w-full">
+                            <div class="interactive-input-box border border-outline-variant rounded-[1.5rem] p-3 shadow-sm focus-within:ring-1 focus-within:ring-primary transition-all">
+                                <div id="pdf-file-chip" class="hidden flex items-center justify-between bg-primary-fixed/40 border border-primary-fixed rounded-xl px-3 py-1.5 mb-2 max-w-xs text-xs">
+                                    <div class="flex items-center gap-1.5 truncate text-primary font-medium">
+                                        <span class="material-symbols-outlined text-[16px]">description</span>
+                                        <span id="pdf-file-chip-name" class="truncate">filename.pdf</span>
+                                    </div>
+                                    <button onclick="clearFile('pdf')" class="hover:bg-primary-fixed/60 rounded p-0.5 text-primary">
+                                        <span class="material-symbols-outlined text-[14px]">close</span>
+                                    </button>
+                                </div>
+                                <textarea id="pdf-text-input" class="w-full bg-transparent border-none focus:ring-0 text-sm text-on-surface placeholder:text-on-surface-variant/40 resize-none min-h-[80px]" placeholder="在此粘贴文献内容，或点击左下角上传 PDF / Word / TXT 文件..."></textarea>
+                                <div class="flex justify-between items-center pt-2 border-t border-surface-container-high">
+                                    <div class="flex items-center">
+                                        <button onclick="triggerUpload('pdf')" class="p-2 hover:bg-surface-container rounded-full text-on-surface-variant transition-colors" title="上传要摘要的文档">
+                                            <span class="material-symbols-outlined text-[20px]">attach_file</span>
+                                        </button>
+                                        <input type="file" id="pdf-file" class="hidden" accept=".pdf,.docx,.doc,.txt" onchange="handleFileChange('pdf', this)"/>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="clearPDFInput()" class="px-3 py-1.5 text-xs border border-outline-variant rounded-xl hover:bg-surface-container transition-colors">清空</button>
+                                        <button id="pdf-submit-btn" onclick="summarizePDF()" class="bg-primary text-on-primary w-8 h-8 rounded-full flex items-center justify-center hover:opacity-90 active:scale-95 transition-all shadow">
+                                            <span class="material-symbols-outlined text-[18px]">arrow_upward</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Right Pane -->
+                <div id="pdf-right-pane" class="pane-transition w-0 h-full bg-background overflow-hidden flex flex-col transform translate-y-full opacity-0 pointer-events-none border-l border-outline-variant/30">
+                    <header class="flex justify-between items-center px-6 py-4 border-b border-outline-variant shrink-0">
+                        <div class="flex items-center space-x-3">
+                            <span class="material-symbols-outlined text-primary">picture_as_pdf</span>
+                            <span class="text-sm font-bold text-on-surface">智能摘要提取报告</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="copyResult(currentPdfResultText)" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant">
+                                <span class="material-symbols-outlined text-[18px]">content_copy</span><span class="text-xs">复制</span>
+                            </button>
+                            <button onclick="exportResult('docx', currentPdfResultText, '文档摘要')" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant">
+                                <span class="material-symbols-outlined text-[18px]">description</span><span class="text-xs">Word</span>
+                            </button>
+                            <button onclick="hideRightPanel('pdf')" class="p-1.5 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant" title="收起面板">
+                                <span class="material-symbols-outlined text-[18px]">close</span>
+                            </button>
+                        </div>
+                    </header>
+                    <div class="flex-grow overflow-y-auto p-8 custom-scrollbar">
+                        <div id="pdf-result-content" class="paper-view markdown-content"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. CSV Preview Panel -->
+        <section id="panel-csv" class="panel-section hidden flex flex-col h-full w-full overflow-hidden">
+            <div class="flex-grow flex overflow-hidden w-full h-full relative">
+                <!-- Left Pane -->
+                <div id="csv-left-pane" class="pane-transition w-full h-full flex flex-col bg-background">
+                    <!-- Left Header -->
+                    <header class="flex justify-between items-center w-full px-6 py-4 bg-background border-b border-outline-variant/30 shrink-0">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary text-[20px]">table_chart</span>
+                            <span class="font-bold text-on-surface text-sm">CSV 数据分析与预览</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <!-- Toggle Results Button (hidden initially) -->
+                            <button id="csv-toggle-result-btn" onclick="toggleResultPanel('csv')" class="hidden flex items-center gap-1.5 px-3 py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-primary rounded-lg transition-colors text-xs font-semibold">
+                                <span class="material-symbols-outlined text-[16px]">visibility</span>
+                                <span id="csv-toggle-result-text">查看结果</span>
+                            </button>
+                            <button onclick="toggleHistorySidebar()" class="p-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors" title="历史记录">
+                                <span class="material-symbols-outlined text-[18px]">history</span>
+                            </button>
+                            <button onclick="toggleSettings()" class="p-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors" title="系统设置">
+                                <span class="material-symbols-outlined text-[18px]">settings</span>
+                            </button>
+                        </div>
+                    </header>
+                    <div id="csv-chat-messages" class="flex-grow overflow-y-auto p-6 space-y-6 max-w-3xl mx-auto w-full">
+                        <div class="flex flex-col items-start max-w-[90%]">
+                            <div class="flex items-center space-x-2 mb-1.5 text-primary">
+                                <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+                                <span class="text-xs font-semibold">ScholarAI</span>
+                            </div>
+                            <div class="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 text-sm leading-relaxed">
+                                请在下方粘贴 CSV 文本数据，或者点击回形针图标上传 CSV/TSV 数据表格文件。
+                            </div>
+                        </div>
+                    </div>
+                    <div id="csv-loading-state" class="hidden px-6 py-3 bg-primary-fixed/50 border-t border-outline-variant flex items-center justify-between text-xs text-primary font-medium animate-pulse">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                            <span>正在解析数据并进行 AI 智能分析，请稍候...</span>
+                        </div>
+                    </div>
+                    <div id="csv-error-state" class="hidden px-6 py-3 bg-error-container text-on-error-container border-t border-outline-variant text-xs flex items-center justify-between font-medium">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[16px]">error</span>
+                            <span id="csv-error-message"></span>
+                        </div>
+                        <button onclick="hideError('csv')" class="hover:opacity-85"><span class="material-symbols-outlined text-[16px]">close</span></button>
+                    </div>
+                    <div class="p-6 bg-background border-t border-outline-variant shrink-0">
+                        <div class="max-w-3xl mx-auto w-full">
+                            <div class="interactive-input-box border border-outline-variant rounded-[1.5rem] p-3 shadow-sm focus-within:ring-1 focus-within:ring-primary transition-all">
+                                <div id="csv-file-chip" class="hidden flex items-center justify-between bg-primary-fixed/40 border border-primary-fixed rounded-xl px-3 py-1.5 mb-2 max-w-xs text-xs">
+                                    <div class="flex items-center gap-1.5 truncate text-primary font-medium">
+                                        <span class="material-symbols-outlined text-[16px]">description</span>
+                                        <span id="csv-file-chip-name" class="truncate">filename.csv</span>
+                                    </div>
+                                    <button onclick="clearFile('csv')" class="hover:bg-primary-fixed/60 rounded p-0.5 text-primary">
+                                        <span class="material-symbols-outlined text-[14px]">close</span>
+                                    </button>
+                                </div>
+                                <textarea id="csv-text-input" class="w-full bg-transparent border-none focus:ring-0 text-xs font-mono resize-none min-h-[80px]" placeholder="在此粘贴带表头的 CSV 数据文本，或点击左下角上传数据表文件..."></textarea>
+                                <div class="flex justify-between items-center pt-2 border-t border-surface-container-high">
+                                    <div class="flex items-center">
+                                        <button onclick="triggerUpload('csv')" class="p-2 hover:bg-surface-container rounded-full text-on-surface-variant transition-colors" title="上传 CSV 数据表文件">
+                                            <span class="material-symbols-outlined text-[20px]">attach_file</span>
+                                        </button>
+                                        <input type="file" id="csv-file" class="hidden" accept=".csv,.tsv,.txt" onchange="handleFileChange('csv', this)"/>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="clearCSVInput()" class="px-3 py-1.5 text-xs border border-outline-variant rounded-xl hover:bg-surface-container transition-colors">清空</button>
+                                        <button id="csv-submit-btn" onclick="analyzeCSV()" class="bg-primary text-on-primary w-8 h-8 rounded-full flex items-center justify-center hover:opacity-90 active:scale-95 transition-all shadow">
+                                            <span class="material-symbols-outlined text-[18px]">arrow_upward</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Right Pane -->
+                <div id="csv-right-pane" class="pane-transition w-0 h-full bg-background overflow-hidden flex flex-col transform translate-y-full opacity-0 pointer-events-none border-l border-outline-variant/30">
+                    <header class="flex justify-between items-center px-6 py-4 border-b border-outline-variant shrink-0">
+                        <div class="flex items-center space-x-3">
+                            <span class="material-symbols-outlined text-primary">table_chart</span>
+                            <span class="text-sm font-bold text-on-surface">CSV 数据分析与预览</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="copyResult(currentCsvResultText)" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant">
+                                <span class="material-symbols-outlined text-[18px]">content_copy</span><span class="text-xs">复制报告</span>
+                            </button>
+                            <button onclick="exportResult('docx', currentCsvResultText, 'CSV 数据分析报告')" class="flex items-center space-x-1 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant">
+                                <span class="material-symbols-outlined text-[18px]">description</span><span class="text-xs">Word</span>
+                            </button>
+                            <button onclick="hideRightPanel('csv')" class="p-1.5 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant" title="关闭面板">
+                                <span class="material-symbols-outlined text-[18px]">close</span>
+                            </button>
+                        </div>
+                    </header>
+                    <div class="flex-grow overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                        <div id="csv-result-wrapper" class="space-y-6">
+                            <div id="csv-stats-section" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div class="stat-card">
+                                    <div id="stat-rows" class="text-lg font-bold text-primary">-</div>
+                                    <div class="text-[10px] text-on-surface-variant mt-1">数据行数</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div id="stat-cols" class="text-lg font-bold text-primary">-</div>
+                                    <div class="text-[10px] text-on-surface-variant mt-1">数据列数</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div id="stat-numeric" class="text-lg font-bold text-primary">-</div>
+                                    <div class="text-[10px] text-on-surface-variant mt-1">数值特征列</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div id="stat-missing" class="text-lg font-bold text-primary">-</div>
+                                    <div class="text-[10px] text-on-surface-variant mt-1">缺失数据量</div>
+                                </div>
+                            </div>
+                            <div id="csv-preview-section" class="border border-outline-variant bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
+                                <div class="px-4 py-2 bg-surface-container-low border-b border-outline-variant flex items-center justify-between text-xs font-semibold text-primary">
+                                    <span>数据表即时预览 (前 10 行)</span>
+                                </div>
+                                <div class="overflow-x-auto max-h-[200px]">
+                                    <table id="csv-data-table" class="data-table"></table>
+                                </div>
+                            </div>
+                            <div id="csv-result-section" class="paper-view markdown-content">
+                                <div id="csv-result-content"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+{% include "_settings_modal.html" %}
+{% include "_history_sidebar.html" %}
+
+<script>
+    // ============== Tab Routing (SPA) ==============
+    
+    function navigateTab(tabId, event) {
+        if (event) event.preventDefault();
+        switchTab(tabId, true);
+    }
+
+    function switchTab(tabId, updateState = true) {
+        // 1. 切换页面 panel 并触发动画过度
+        const panels = document.querySelectorAll('.panel-section');
+        panels.forEach(p => {
+            p.classList.remove('active-panel');
+            // 过渡结束后设为隐藏以防遮挡点击
+            setTimeout(() => {
+                if (!p.classList.contains('active-panel')) {
+                    p.style.display = 'none';
+                }
+            }, 400);
+        });
+        
+        const activePanel = document.getElementById(`panel-${tabId}`);
+        if (activePanel) {
+            activePanel.style.display = 'flex';
+            // 稍作延时以确保 display:flex 已经生效，触发 CSS 过渡
+            requestAnimationFrame(() => {
+                activePanel.classList.add('active-panel');
+            });
+        }
+
+        // 2. 侧栏指示器阴影动效
+        document.querySelectorAll('.nav-tab').forEach(t => {
+            t.classList.remove('text-primary', 'font-bold');
+        });
+        
+        const activeTab = document.querySelector(`.nav-tab[data-tab="${tabId}"]`);
+        if (activeTab) {
+            activeTab.classList.add('text-primary', 'font-bold');
+            const indicator = document.getElementById('sidebar-indicator');
+            if (indicator) {
+                indicator.style.top = `${activeTab.offsetTop}px`;
+                indicator.style.height = `${activeTab.offsetHeight}px`;
+                indicator.style.opacity = '1';
+            }
+        }
+
+        // 3. 关联对应的历史记录模块
+        if (tabId !== 'dashboard') {
+            const toolKey = tabId === 'pdf' ? 'pdf_summary' : tabId;
+            initHistorySidebar(toolKey);
+        }
+
+        // 4. 修改浏览器 URL
+        const path = tabId === 'dashboard' ? '/' : `/${tabId}`;
+        if (updateState && window.location.pathname !== path) {
+            history.pushState(null, '', path);
+        }
+    }
+
+    window.addEventListener('popstate', handleUrlRouting);
+
+    function handleUrlRouting() {
+        const path = window.location.pathname;
+        if (path === '/' || path === '') {
+            switchTab('dashboard', false);
+        } else {
+            const tabId = path.substring(1);
+            switchTab(tabId, false);
+        }
+    }
+
+    // ============== Tool Code: Common State & Uploads ==============
+    let selectedFiles = {};
+
+    function triggerUpload(tool) {
+        const fileInput = document.getElementById(`${tool}-file`);
+        if (fileInput) fileInput.click();
+    }
+
+    function handleFileChange(tool, input) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            
+            // 展示上传的 tag 芯片并填充名字
+            selectedFiles[tool] = file;
+            const chip = document.getElementById(`${tool}-file-chip`);
+            const nameEl = document.getElementById(`${tool}-file-chip-name`);
+            if (chip && nameEl) {
+                nameEl.textContent = file.name;
+                chip.classList.remove('hidden');
+            }
+            hideError(tool);
+        }
+    }
+
+    function clearFile(tool) {
+        selectedFiles[tool] = null;
+        const fileInput = document.getElementById(`${tool}-file`);
+        if (fileInput) fileInput.value = '';
+        
+        const chip = document.getElementById(`${tool}-file-chip`);
+        if (chip) chip.classList.add('hidden');
+    }
+    
+    // UI Helpers
+    function showError(tool, message) {
+        const errState = document.getElementById(`${tool}-error-state`);
+        const errMsg = document.getElementById(`${tool}-error-message`);
+        if (errState && errMsg) {
+            errMsg.textContent = message;
+            errState.classList.remove('hidden');
+        }
+    }
+
+    function hideError(tool) {
+        const errState = document.getElementById(`${tool}-error-state`);
+        if (errState) errState.classList.add('hidden');
+    }
+
+    function copyResult(text) {
+        if (text) copyText(text);
+    }
+
+    async function exportResult(format, content, filename) {
+        await exportAndPreview(format, content, filename, 'export-preview', 'clean');
+    }
+
+    // 动态弹出右侧 Panel 并收缩左侧 Panel 宽度
+    function showRightPanel(tool) {
+        const left = document.getElementById(`${tool}-left-pane`);
+        const right = document.getElementById(`${tool}-right-pane`);
+        if (left && right) {
+            // 左侧占 50% 宽度
+            left.classList.remove('w-full');
+            left.classList.add('md:w-1/2');
+            
+            // 右侧自下方平滑弹出
+            right.classList.remove('w-0', 'translate-y-full', 'opacity-0', 'pointer-events-none');
+            right.classList.add('w-full', 'md:w-1/2', 'translate-y-0', 'opacity-100', 'pointer-events-auto');
+            
+            // 显示查看结果按钮，并设为开启（已展示结果）状态
+            const btn = document.getElementById(`${tool}-toggle-result-btn`);
+            if (btn) btn.classList.remove('hidden');
+            updateToggleResultBtn(tool, true);
+        }
+    }
+
+    function hideRightPanel(tool) {
+        const left = document.getElementById(`${tool}-left-pane`);
+        const right = document.getElementById(`${tool}-right-pane`);
+        if (left && right) {
+            left.classList.remove('md:w-1/2');
+            left.classList.add('w-full');
+            
+            right.classList.add('w-0', 'translate-y-full', 'opacity-0', 'pointer-events-none');
+            right.classList.remove('w-full', 'md:w-1/2', 'translate-y-0', 'opacity-100', 'pointer-events-auto');
+            
+            // 保持查看结果按钮可见，但设为关闭（已隐藏结果）状态
+            updateToggleResultBtn(tool, false);
+        }
+    }
+
+    function toggleResultPanel(tool) {
+        const right = document.getElementById(`${tool}-right-pane`);
+        if (!right) return;
+        const isOpen = !right.classList.contains('pointer-events-none');
+        if (isOpen) {
+            hideRightPanel(tool);
+        } else {
+            showRightPanel(tool);
+        }
+    }
+
+    function updateToggleResultBtn(tool, isOpen) {
+        const textEl = document.getElementById(`${tool}-toggle-result-text`);
+        const btn = document.getElementById(`${tool}-toggle-result-btn`);
+        if (!textEl || !btn) return;
+        
+        if (isOpen) {
+            textEl.textContent = '隐藏结果';
+            btn.classList.add('bg-primary-fixed', 'text-primary');
+            btn.classList.remove('bg-surface-container', 'text-on-surface-variant');
+        } else {
+            textEl.textContent = '查看结果';
+            btn.classList.remove('bg-primary-fixed', 'text-primary');
+            btn.classList.add('bg-surface-container', 'text-on-surface-variant');
+        }
+    }
+
+    // ============== 1. Resume Optimization ==============
+    let currentResumeText = '';
+    let currentExportText = '';
+
+    function clearResumeInput() {
+        document.getElementById('resume-input').value = '';
+        clearFile('resume');
+        hideResumeResult();
+        hideError('resume');
+    }
+
+    function hideResumeResult() {
+        hideRightPanel('resume');
+        document.getElementById('resume-result-content').innerHTML = '';
+    }
+
+    async function optimizeResume() {
+        const input = document.getElementById('resume-input').value.trim();
+        if (!input && !selectedFiles['resume']) { showError('resume', '请输入简历内容或上传文件'); return; }
+        hideError('resume');
+        hideResumeResult();
+        
+        document.getElementById('resume-loading-state').classList.remove('hidden');
+        document.getElementById('resume-optimize-btn').disabled = true;
+
+        try {
+            let response, data;
+            if (selectedFiles['resume']) {
+                const formData = new FormData();
+                formData.append('file', selectedFiles['resume']);
+                response = await fetch('/api/resume/optimize', { method: 'POST', body: formData });
+            } else {
+                response = await fetch('/api/resume/optimize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: input }),
+                });
+            }
+            data = await response.json();
+            if (response.ok) {
+                const text = data.result || data.optimized || data.resume || '';
+                currentResumeText = text;
+                currentExportText = data.optimized_resume || data.resume_only || text;
+                
+                document.getElementById('resume-result-content').innerHTML = renderMarkdown(text);
+                showRightPanel('resume');
+                addChatMessage('resume', input || selectedFiles['resume'].name, '简历优化排版');
+                
+                saveHistory({
+                    tool: 'resume',
+                    title: '简历优化 - ' + new Date().toLocaleString('zh-CN'),
+                    input_text: data.input_text || input || (selectedFiles['resume'] ? selectedFiles['resume'].name : ""),
+                    output_text: text,
+                    meta: { source: selectedFiles['resume'] ? 'file' : 'text' },
+                });
+            } else {
+                showError('resume', data.error || '优化失败');
+            }
+        } catch (e) {
+            showError('resume', '网络错误，请检查后端运行状态');
+        } finally {
+            document.getElementById('resume-loading-state').classList.add('hidden');
+            document.getElementById('resume-optimize-btn').disabled = false;
+        }
+    }
+
+    // ============== 2. Copywriting Generation ==============
+    let selectedStyle = '';
+    let currentCopyResultText = '';
+    let currentSchemes = [];
+
+    function selectStyle(btn) {
+        document.querySelectorAll('.style-tag').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedStyle = btn.dataset.style;
+    }
+
+    function clearCopyInput() {
+        document.getElementById('scene-input').value = '';
+        document.getElementById('count-select').value = '5';
+        document.querySelectorAll('.style-tag').forEach(b => b.classList.remove('selected'));
+        selectedStyle = '';
+        hideCopyResult();
+        hideError('copy');
+    }
+
+    function hideCopyResult() {
+        hideRightPanel('copy');
+        document.getElementById('copy-result-list').innerHTML = '';
+    }
+
+    async function generateCopywriting() {
+        const scene = document.getElementById('scene-input').value.trim();
+        const count = document.getElementById('count-select').value;
+        if (!scene) { showError('copy', '请输入场景描述'); return; }
+        hideError('copy');
+        hideCopyResult();
+        
+        document.getElementById('copy-loading-state').classList.remove('hidden');
+        document.getElementById('copy-generate-btn').disabled = true;
+        try {
+            const response = await fetch('/api/copywriting/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scene, style: selectedStyle || '默认风格', count: parseInt(count) }),
+            });
+            const data = await response.json();
+            if (response.ok) {
+                let results = data.result || data.copywriting || data.results || [];
+                if (typeof results === 'string') results = [results];
+                
+                showCopyResults(results);
+                addChatMessage('copy', scene, '创意文案生成');
+                
+                saveHistory({
+                    tool: 'copywriting',
+                    title: '文案生成 - ' + (selectedStyle || '默认') + ' - ' + new Date().toLocaleString('zh-CN'),
+                    input_text: scene,
+                    output_text: currentCopyResultText,
+                    meta: { style: selectedStyle || '默认', count: parseInt(count) },
+                });
+            } else {
+                showError('copy', data.error || '生成失败');
+            }
+        } catch (e) {
+            showError('copy', '网络连接异常');
+        } finally {
+            document.getElementById('copy-loading-state').classList.add('hidden');
+            document.getElementById('copy-generate-btn').disabled = false;
+        }
+    }
+
+    function showCopyResults(results) {
+        const container = document.getElementById('copy-result-list');
+        container.innerHTML = '';
+        currentSchemes = [];
+        let content = Array.isArray(results) ? results.join('\n\n') : results;
+        currentCopyResultText = content;
+        
+        const schemes = parseMarkdownSchemes(content);
+        currentSchemes = schemes;
+        if (schemes.length === 0) {
+            const card = document.createElement('div');
+            card.className = 'scheme-card rounded-2xl p-6';
+            card.innerHTML = `<div class="markdown-content">${renderMarkdown(content)}</div>`;
+            container.appendChild(card);
+        } else {
+            schemes.forEach((scheme, index) => {
+                const card = document.createElement('div');
+                card.className = 'scheme-card rounded-2xl p-6';
+                card.innerHTML = `
+                    <div class="flex items-start gap-4">
+                        <span class="flex-shrink-0 w-8 h-8 rounded-full bg-primary-fixed text-primary flex items-center justify-center text-xs font-bold">${index + 1}</span>
+                        <div class="flex-grow min-w-0">
+                            <h3 class="text-sm font-bold text-primary mb-3">${escapeHtml(scheme.title || '方案')}</h3>
+                            <div class="markdown-content text-sm leading-relaxed">${renderMarkdown(scheme.content)}</div>
+                            <button onclick="copyCopyScheme(${index})" class="mt-3 text-primary text-xs flex items-center gap-1 hover:underline font-semibold">
+                                <span class="material-symbols-outlined text-[16px]">content_copy</span><span>复制此方案</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+        showRightPanel('copy');
+    }
+
+    function copyCopyScheme(index) {
+        const s = currentSchemes[index];
+        if (s) copyText(`${s.title}\n\n${s.content}`);
+    }
+
+    function copyAllCopyResults() {
+        if (currentSchemes.length > 0) {
+            copyText(currentSchemes.map((s, i) => `【${s.title || `方案${i + 1}`}】\n\n${s.content}`).join('\n\n---\n\n'));
+        } else {
+            copyText(currentCopyResultText);
+        }
+    }
+
+    function parseMarkdownSchemes(text) {
+        if (!text) return [];
+        const splitRegex = /(#{1,3}\s*方案[\u4e00-\u9fa5\d]+[^\n]*|方案[\u4e00-\u9fa5\d]+[:：][^\n]*)/g;
+        const parts = text.split(splitRegex);
+        const schemes = [];
+        let hasHeading = false;
+
+        for (let i = 0; i < parts.length; i++) {
+            let part = parts[i];
+            if (!part) continue;
+            if (/^(#{1,3}\s*方案|方案[\u4e00-\u9fa5\d]+[:：])/.test(part)) {
+                hasHeading = true;
+                let title = part.replace(/^#{1,3}\s*/, '').trim().replace(/[:：]\s*$/, '');
+                schemes.push({ title, content: '' });
+            } else if (hasHeading && schemes.length > 0) {
+                part = part.replace(/^---\s*$/gm, '').trim();
+                if (part) {
+                    schemes[schemes.length - 1].content += (schemes[schemes.length - 1].content ? '\n\n' : '') + part;
+                }
+            }
+        }
+        if (schemes.length === 0 && text.trim()) {
+            const paras = text.split(/\n\s*\n+/).map(p => p.trim()).filter(Boolean);
+            const chineseNums = ['一', '二', '三', '四', '五'];
+            paras.forEach((p, i) => {
+                schemes.push({ title: `方案${chineseNums[i] || (i + 1)}`, content: p });
+            });
+        }
+        schemes.forEach(s => s.content = s.content.trim());
+        return schemes;
+    }
+
+    // ============== 3. Translation Assistant ==============
+    let currentTranslateText = '';
+    let currentTranslateExportText = '';
+
+    function clearTranslateInput() {
+        document.getElementById('translate-text-input').value = '';
+        clearFile('translate');
+        hideTranslateResult();
+        hideError('translate');
+    }
+
+    function hideTranslateResult() {
+        hideRightPanel('translate');
+        document.getElementById('translate-result-content').innerHTML = '';
+    }
+
+    async function translateText() {
+        const text = document.getElementById('translate-text-input').value.trim();
+        const targetLang = document.getElementById('target-lang').value;
+        if (!text && !selectedFiles['translate']) { showError('translate', '请输入文本或上传文件'); return; }
+        
+        hideError('translate');
+        hideTranslateResult();
+        document.getElementById('translate-loading-state').classList.remove('hidden');
+        document.getElementById('translate-submit-btn').disabled = true;
+
+        try {
+            let response, data;
+            if (selectedFiles['translate']) {
+                const fd = new FormData();
+                fd.append('file', selectedFiles['translate']);
+                fd.append('target_lang', targetLang);
+                response = await fetch('/api/translate/translate', { method: 'POST', body: fd });
+            } else {
+                response = await fetch('/api/translate/translate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, target_lang: targetLang }),
+                });
+            }
+            data = await response.json();
+            if (response.ok) {
+                currentTranslateText = data.result || data.translation || data.text || '';
+                currentTranslateExportText = data.optimized_text || currentTranslateText;
+                
+                document.getElementById('translate-result-content').innerHTML = renderMarkdown(currentTranslateText);
+                showRightPanel('translate');
+                addChatMessage('translate', text || selectedFiles['translate'].name, '学术多语翻译');
+
+                saveHistory({
+                    tool: 'translate',
+                    title: '翻译→' + targetLang + ' - ' + new Date().toLocaleString('zh-CN'),
+                    input_text: data.source || text || (selectedFiles['translate'] ? selectedFiles['translate'].name : ""),
+                    output_text: currentTranslateText,
+                    meta: { target_lang: targetLang, source: selectedFiles['translate'] ? 'file' : 'text' },
+                });
+            } else {
+                showError('translate', data.error || '翻译失败');
+            }
+        } catch (e) {
+            showError('translate', '连接异常');
+        } finally {
+            document.getElementById('translate-loading-state').classList.add('hidden');
+            document.getElementById('translate-submit-btn').disabled = false;
+        }
+    }
+
+    async function polishText() {
+        const text = document.getElementById('translate-text-input').value.trim();
+        if (!text) { showError('translate', '请输入要润色的文本'); return; }
+        
+        hideError('translate');
+        hideTranslateResult();
+        document.getElementById('translate-loading-state').classList.remove('hidden');
+        try {
+            const response = await fetch('/api/translate/polish', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text }),
+            });
+            const data = await response.json();
+            if (response.ok) {
+                currentTranslateText = data.result || data.polished || data.text || '';
+                currentTranslateExportText = data.optimized_text || currentTranslateText;
+                
+                document.getElementById('translate-result-content').innerHTML = renderMarkdown(currentTranslateText);
+                showRightPanel('translate');
+                addChatMessage('translate', text, '学术论文润色');
+
+                saveHistory({
+                    tool: 'translate',
+                    title: '学术润色 - ' + new Date().toLocaleString('zh-CN'),
+                    input_text: text,
+                    output_text: currentTranslateText,
+                    meta: { action: 'polish' },
+                });
+            } else {
+                showError('translate', data.error || '润色失败');
+            }
+        } catch (e) {
+            showError('translate', '网络连接错误');
+        } finally {
+            document.getElementById('translate-loading-state').classList.add('hidden');
+        }
+    }
+
+    function swapTranslateInputResult() {
+        document.getElementById('translate-text-input').value = currentTranslateText;
+        hideTranslateResult();
+    }
+
+    // ============== 4. PDF Summary ==============
+    let currentPdfResultText = '';
+
+    function clearPDFInput() {
+        document.getElementById('pdf-text-input').value = '';
+        clearFile('pdf');
+        hidePdfResult();
+        hideError('pdf');
+    }
+
+    function hidePdfResult() {
+        hideRightPanel('pdf');
+        document.getElementById('pdf-result-content').innerHTML = '';
+    }
+
+    async function summarizePDF() {
+        const text = document.getElementById('pdf-text-input').value.trim();
+        if (!text && !selectedFiles['pdf']) { showError('pdf', '请上传文件或输入文本'); return; }
+        
+        hideError('pdf');
+        hidePdfResult();
+        document.getElementById('pdf-loading-state').classList.remove('hidden');
+        document.getElementById('pdf-submit-btn').disabled = true;
+        try {
+            let response, data;
+            if (selectedFiles['pdf']) {
+                const fd = new FormData();
+                fd.append('file', selectedFiles['pdf']);
+                response = await fetch('/api/pdf/upload', { method: 'POST', body: fd });
+            } else {
+                response = await fetch('/api/pdf/summarize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text }),
+                });
+            }
+            data = await response.json();
+            if (response.ok) {
+                currentPdfResultText = data.result || data.summary || data.text || '';
+                
+                document.getElementById('pdf-result-content').innerHTML = renderMarkdown(currentPdfResultText);
+                showRightPanel('pdf');
+                addChatMessage('pdf', text || selectedFiles['pdf'].name, '学术论文智能摘要');
+
+                saveHistory({
+                    tool: 'pdf_summary',
+                    title: 'PDF摘要 - ' + (selectedFiles['pdf'] ? selectedFiles['pdf'].name : '文本') + ' - ' + new Date().toLocaleString('zh-CN'),
+                    input_text: data.source || text || (selectedFiles['pdf'] ? selectedFiles['pdf'].name : ''),
+                    output_text: currentPdfResultText,
+                    meta: { source: selectedFiles['pdf'] ? 'file' : 'text' },
+                });
+            } else {
+                showError('pdf', data.error || '解析摘要失败');
+            }
+        } catch (e) {
+            showError('pdf', '网络通讯异常');
+        } finally {
+            document.getElementById('pdf-loading-state').classList.add('hidden');
+            document.getElementById('pdf-submit-btn').disabled = false;
+        }
+    }
+
+    // ============== 5. CSV Preview ==============
+    let currentCsvResultText = '';
+
+    function clearCSVInput() {
+        document.getElementById('csv-text-input').value = '';
+        clearFile('csv');
+        hideCsvResult();
+        hideError('csv');
+    }
+
+    function hideCsvResult() {
+        hideRightPanel('csv');
+        document.getElementById('csv-result-content').innerHTML = '';
+        document.getElementById('csv-data-table').innerHTML = '';
+    }
+
+    async function analyzeCSV() {
+        const text = document.getElementById('csv-text-input').value.trim();
+        if (!text && !selectedFiles['csv']) { showError('csv', '请上传 CSV 文件或输入数据'); return; }
+        
+        hideError('csv');
+        hideCsvResult();
+        document.getElementById('csv-loading-state').classList.remove('hidden');
+        document.getElementById('csv-submit-btn').disabled = true;
+        try {
+            let response, data;
+            if (selectedFiles['csv']) {
+                const fd = new FormData();
+                fd.append('file', selectedFiles['csv']);
+                response = await fetch('/api/csv/upload', { method: 'POST', body: fd });
+            } else {
+                response = await fetch('/api/csv/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data: text }),
+                });
+            }
+            data = await response.json();
+            if (response.ok) {
+                if (data.preview) displayCsvPreview(data.preview);
+                if (data.stats) displayCsvStats(data.stats);
+
+                currentCsvResultText = data.analysis || '';
+                document.getElementById('csv-result-content').innerHTML = renderMarkdown(currentCsvResultText);
+                
+                showRightPanel('csv');
+                addChatMessage('csv', text || (selectedFiles['csv'] ? selectedFiles['csv'].name : ""), 'CSV数据可视化分析');
+
+                saveHistory({
+                    tool: 'csv',
+                    title: 'CSV分析 - ' + (selectedFiles['csv'] ? selectedFiles['csv'].name : '数据') + ' - ' + new Date().toLocaleString('zh-CN'),
+                    input_text: (data.preview && data.preview.columns) ? data.preview.columns.join(', ') : (text || '').slice(0, 200),
+                    output_text: currentCsvResultText,
+                    meta: { source: selectedFiles['csv'] ? 'file' : 'text', rows: (data.preview && data.preview.row_count) || 0 },
+                });
+            } else {
+                showError('csv', data.error || '分析失败');
+            }
+        } catch (e) {
+            showError('csv', '网络连接中断');
+        } finally {
+            document.getElementById('csv-loading-state').classList.add('hidden');
+            document.getElementById('csv-submit-btn').disabled = false;
+        }
+    }
+
+    function displayCsvPreview(preview) {
+        if (!preview || !preview.columns || !preview.head) return;
+        const table = document.getElementById('csv-data-table');
+        let html = '<thead><tr>';
+        preview.columns.forEach(col => { html += `<th>${escapeHtml(col)}</th>`; });
+        html += '</tr></thead><tbody>';
+        preview.head.forEach(row => {
+            html += '<tr>';
+            preview.columns.forEach(col => { html += `<td>${escapeHtml(row[col])}</td>`; });
+            html += '</tr>';
+        });
+        html += '</tbody>';
+        table.innerHTML = html;
+    }
+
+    function displayCsvStats(stats) {
+        document.getElementById('stat-rows').textContent = stats.rows ?? '-';
+        document.getElementById('stat-cols').textContent = stats.columns ?? '-';
+        document.getElementById('stat-numeric').textContent = stats.numeric_columns ?? '-';
+        document.getElementById('stat-missing').textContent = stats.missing_values ?? '0';
+    }
+
+    // ============== Chat Area integration helper ==============
+    function addChatMessage(tool, input, actionName) {
+        const chatMessages = document.getElementById(`${tool}-chat-messages`);
+        if (!chatMessages) return;
+
+        const userDiv = document.createElement('div');
+        userDiv.className = "flex flex-col items-end max-w-[90%] ml-auto mt-4";
+        userDiv.innerHTML = `
+            <div class="bg-primary text-on-primary rounded-2xl p-4 text-sm shadow-sm leading-relaxed">
+                ${escapeHtml(input)}
+            </div>
+        `;
+        chatMessages.appendChild(userDiv);
+
+        const aiDiv = document.createElement('div');
+        aiDiv.className = "flex flex-col items-start max-w-[90%] mt-4";
+        aiDiv.innerHTML = `
+            <div class="flex items-center space-x-2 mb-1.5 text-primary">
+                <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+                <span class="text-xs font-semibold">ScholarAI</span>
+            </div>
+            <div class="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 text-sm leading-relaxed border-l-4 border-primary">
+                已为您完成 ${actionName}。完整的分析结果、格式化排版预览及多格式导出组件已呈现在右侧面板中。
+            </div>
+        `;
+        chatMessages.appendChild(aiDiv);
+        
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // ============== 输入框 3D 旋转与鼠标发光动效 ==============
+    function bindInputBoxAnimations() {
+        const boxes = document.querySelectorAll('.interactive-input-box');
+        boxes.forEach(box => {
+            box.addEventListener('mousemove', (e) => {
+                const rect = box.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                // 限制最大旋转为 2 度
+                const rotateY = ((x - centerX) / centerX) * 2;
+                const rotateX = -((y - centerY) / centerY) * 2;
+                
+                // 阴影向相反方向轻微移动，营造悬浮感
+                const shadowX = ((x - centerX) / centerX) * -3;
+                const shadowY = ((y - centerY) / centerY) * -3;
+                
+                box.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.002, 1.002, 1.002)`;
+                box.style.boxShadow = `${shadowX}px ${shadowY}px 20px rgba(51, 69, 55, 0.08), 0 4px 12px rgba(0, 0, 0, 0.02)`;
+                box.style.setProperty('--mouse-x', `${x}px`);
+                box.style.setProperty('--mouse-y', `${y}px`);
+            });
+            
+            box.style.transition = 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.5s cubic-bezier(0.25, 1, 0.5, 1)';
+            box.addEventListener('mouseleave', () => {
+                box.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+                box.style.boxShadow = '0 4px 24px -2px rgba(0, 0, 0, 0.04)';
+            });
+        });
+    }
+
+    // ============== Init and Bindings ==============
+    document.addEventListener('DOMContentLoaded', () => {
+        loadConfig();
+        
+        const input = document.getElementById('quick-chat-input');
+        if (input) {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleQuickSend();
+                }
+            });
+        }
+
+        // 绑定输入框 3D 灵动效
+        bindInputBoxAnimations();
+
+        // URL 路由分发
+        handleUrlRouting();
+    });
+
+    function handleQuickSend() {
+        const text = document.getElementById('quick-chat-input').value.trim();
+        if (!text) return;
+        
+        let tab = 'resume';
+        if (text.includes('文案') || text.includes('广告')) tab = 'copywriting';
+        else if (text.includes('翻译') || text.includes('润色')) tab = 'translate';
+        else if (text.includes('pdf') || text.includes('PDF') || text.includes('摘要')) tab = 'pdf';
+        else if (text.includes('csv') || text.includes('CSV') || text.includes('数据')) tab = 'csv';
+        
+        switchTab(tab);
+        
+        const inputEl = document.getElementById(tab === 'copywriting' ? 'scene-input' : (tab === 'translate' ? 'translate-text-input' : (tab === 'pdf' ? 'pdf-text-input' : (tab === 'csv' ? 'csv-text-input' : 'resume-input'))));
+        if (inputEl) {
+            inputEl.value = text;
+            if (tab === 'resume') optimizeResume();
+            else if (tab === 'copywriting') generateCopywriting();
+            else if (tab === 'translate') translateText();
+            else if (tab === 'pdf') summarizePDF();
+            else if (tab === 'csv') analyzeCSV();
+        }
+    }
+
+    // 重载历史载入
+    loadHistoryItem = async function(id) {
+        try {
+            const res = await fetch(`/api/history/${id}`);
+            const data = await res.json();
+            if (data.success) {
+                const rec = data.record;
+                const tool = rec.tool === 'pdf_summary' ? 'pdf' : rec.tool;
+                
+                switchTab(tool);
+                
+                if (tool === 'resume') {
+                    currentResumeText = rec.output_text;
+                    currentExportText = rec.output_text;
+                    document.getElementById('resume-input').value = rec.input_text;
+                    document.getElementById('resume-result-content').innerHTML = renderMarkdown(rec.output_text);
+                    showRightPanel('resume');
+                } else if (tool === 'copywriting') {
+                    document.getElementById('scene-input').value = rec.input_text;
+                    showCopyResults(rec.output_text);
+                } else if (tool === 'translate') {
+                    currentTranslateText = rec.output_text;
+                    currentTranslateExportText = rec.output_text;
+                    document.getElementById('translate-text-input').value = rec.input_text;
+                    document.getElementById('translate-result-content').innerHTML = renderMarkdown(rec.output_text);
+                    showRightPanel('translate');
+                } else if (tool === 'pdf') {
+                    currentPdfResultText = rec.output_text;
+                    document.getElementById('pdf-text-input').value = rec.input_text;
+                    document.getElementById('pdf-result-content').innerHTML = renderMarkdown(rec.output_text);
+                    showRightPanel('pdf');
+                } else if (tool === 'csv') {
+                    currentCsvResultText = rec.output_text;
+                    document.getElementById('csv-text-input').value = rec.input_text;
+                    document.getElementById('csv-result-content').innerHTML = renderMarkdown(rec.output_text);
+                    showRightPanel('csv');
+                }
+                
+                toggleHistorySidebar();
+                showToast('已加载历史记录');
+            }
+        } catch (e) {
+            showToast('加载失败', 'error');
+        }
+    }
+</script>
+</body>
+</html>

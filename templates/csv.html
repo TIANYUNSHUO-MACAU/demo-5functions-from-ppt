@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>CSV预览 - AI助手</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Geist:wght@400;600;700&display=swap" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#c0c1ff", secondary: "#4cd7f6", tertiary: "#ffdcc5",
+                        surface: "#131317", "surface-container": "#1f1f27",
+                        "on-surface": "#e4e1ed", "on-surface-variant": "#c7c4d7",
+                        "on-primary": "#1000a9", "background": "#13131b",
+                    },
+                    fontFamily: { sans: ["Geist", "sans-serif"], mono: ["JetBrains Mono", "monospace"] },
+                },
+            },
+        }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Geist', sans-serif; background: #13131b; color: #e4e1ed; min-height: 100vh; }
+        #p5-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .glass-card { background: rgba(31, 31, 39, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .input-area { background: rgba(19, 19, 27, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.3s ease; }
+        .input-area:focus { border-color: rgba(76, 215, 246, 0.5); box-shadow: 0 0 20px rgba(76, 215, 246, 0.2); outline: none; }
+        .btn-primary { background: linear-gradient(135deg, #4cd7f6 0%, #3bc4e0 100%); color: #001f26; transition: all 0.3s ease; }
+        .btn-primary:hover:not(:disabled) { transform: scale(1.02); box-shadow: 0 10px 30px rgba(76, 215, 246, 0.4); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-secondary { background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); transition: all 0.3s ease; }
+        .btn-secondary:hover { border-color: rgba(76, 215, 246, 0.5); background: rgba(76, 215, 246, 0.1); }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .result-card { background: rgba(19, 19, 27, 0.9); border: 1px solid rgba(76, 215, 246, 0.2); animation: fadeIn 0.5s ease; }
+        .dropzone { transition: all 0.3s ease; }
+        .dropzone:hover { border-color: #4cd7f6 !important; background: rgba(76, 215, 246, 0.05); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .data-table th { background: rgba(76, 215, 246, 0.1); color: #4cd7f6; font-weight: 600; text-align: left; padding: 10px 12px; border-bottom: 1px solid rgba(76, 215, 246, 0.2); }
+        .data-table td { padding: 8px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); color: #c7c4d7; }
+        .data-table tr:hover td { background: rgba(76, 215, 246, 0.05); }
+        .stat-card { background: rgba(76, 215, 246, 0.1); border: 1px solid rgba(76, 215, 246, 0.2); border-radius: 12px; padding: 16px; text-align: center; }
+        .stat-value { font-size: 28px; font-weight: 700; color: #4cd7f6; }
+        .stat-label { font-size: 12px; color: #c7c4d7; margin-top: 4px; }
+        .markdown-content h1, .markdown-content h2, .markdown-content h3, .markdown-content h4 { color: #4cd7f6; margin-top: 1rem; margin-bottom: 0.5rem; }
+        .markdown-content strong { color: #c0c1ff; font-weight: 600; }
+        .markdown-content em { color: #ffdcc5; }
+        .markdown-content p { color: #e4e1ed; line-height: 1.75; margin-bottom: 0.75rem; }
+        .markdown-content li { color: #e4e1ed; line-height: 1.7; }
+        .markdown-content blockquote { border-left: 3px solid #4cd7f6; padding-left: 12px; color: #c7c4d7; font-style: italic; margin: 0.75rem 0; }
+        .markdown-content code { background: #1f1f27; padding: 2px 6px; border-radius: 4px; color: #4cd7f6; font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
+        .markdown-content table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.9em; }
+        .markdown-content table th { background: rgba(76, 215, 246, 0.1); color: #4cd7f6; padding: 8px 12px; border: 1px solid rgba(76, 215, 246, 0.2); }
+        .markdown-content table td { padding: 6px 12px; border: 1px solid rgba(255, 255, 255, 0.05); color: #c7c4d7; }
+        .markdown-content hr { border: 0; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 1rem 0; }
+    </style>
+</head>
+<body>
+    <div id="p5-canvas"></div>
+
+    <div class="relative z-10 max-w-5xl mx-auto px-4 py-8">
+        <!-- Navigation -->
+        <nav class="flex items-center justify-between mb-12">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center text-secondary">
+                    <span class="material-symbols-outlined">analytics</span>
+                </div>
+                <span class="text-xl font-bold text-on-surface">AI助手</span>
+            </a>
+            <div class="flex items-center gap-4">
+                <a href="/" class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1">
+                    <span class="material-symbols-outlined text-lg">home</span>
+                    <span>返回首页</span>
+                </a>
+                <span id="api-status-badge" class="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-yellow-500/10 border border-yellow-500/30 text-yellow-400" title="当前为模拟返回">
+                    <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
+                    <span id="api-status-text">未配置</span>
+                </span>
+                <button onclick="openSettings()" class="btn-secondary px-4 py-2 rounded-full text-sm font-medium text-on-surface flex items-center gap-2" title="配置 AI 模型与 API Key">
+                    <span class="material-symbols-outlined text-base">settings</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Page Header -->
+        <div class="mb-8">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-12 h-12 rounded-xl bg-secondary/20 flex items-center justify-center text-secondary">
+                    <span class="material-symbols-outlined text-2xl">analytics</span>
+                </div>
+                <h1 class="text-3xl font-bold text-on-surface">CSV 智能分析</h1>
+            </div>
+            <p class="text-on-surface-variant">上传 CSV 文件或粘贴数据，AI 将自动解析并生成结构化分析报告</p>
+        </div>
+
+        <!-- Upload + Input Section -->
+        <div class="glass-card rounded-2xl p-8 mb-8">
+            <!-- 文件上传区 -->
+            <div id="csv-dropzone" class="dropzone border-2 border-dashed border-outline-variant rounded-xl p-8 mb-6 text-center cursor-pointer hover:border-secondary">
+                <input type="file" id="csv-file" class="hidden" accept=".csv,.tsv,.txt">
+                <div id="csv-upload-default">
+                    <span class="material-symbols-outlined text-5xl text-secondary mb-2">upload_file</span>
+                    <p class="text-on-surface font-medium mb-1">点击或拖拽文件到此处</p>
+                    <p class="text-on-surface-variant text-sm">支持 CSV / TSV / TXT</p>
+                </div>
+                <div id="csv-upload-success" class="hidden">
+                    <span class="material-symbols-outlined text-3xl text-emerald-400 mb-2">check_circle</span>
+                    <p id="csv-filename" class="text-on-surface font-medium"></p>
+                    <p class="text-on-surface-variant text-sm mt-1">文件已加载</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 mb-6">
+                <div class="flex-grow h-px bg-white/10"></div>
+                <span class="text-on-surface-variant text-sm">或</span>
+                <div class="flex-grow h-px bg-white/10"></div>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-on-surface mb-3">粘贴 CSV 数据（首行为表头）</label>
+                <textarea id="text-input" class="input-area w-full h-40 rounded-xl p-4 text-on-surface placeholder-on-surface-variant resize-none font-mono text-sm" placeholder="name,age,city,salary&#10;张三,28,北京,15000&#10;李四,35,上海,20000..."></textarea>
+            </div>
+
+            <div class="flex flex-wrap gap-4">
+                <button id="analyze-btn" onclick="analyzeCSV()" class="btn-primary px-8 py-3 rounded-xl font-semibold flex items-center gap-2">
+                    <span class="material-symbols-outlined">analytics</span>
+                    分析数据
+                </button>
+                <button onclick="clearInput()" class="btn-secondary px-8 py-3 rounded-xl font-semibold text-on-surface">清空</button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="hidden glass-card rounded-2xl p-8 mb-8 text-center">
+            <div class="inline-block w-12 h-12 border-4 border-secondary border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p class="text-on-surface">AI 正在分析数据结构...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="hidden glass-card rounded-2xl p-6 mb-8 border border-red-500/30">
+            <div class="flex items-start gap-3">
+                <span class="material-symbols-outlined text-red-400">error</span>
+                <div>
+                    <p class="text-red-400 font-medium">出错了</p>
+                    <p id="error-message" class="text-red-300 text-sm mt-1"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div id="stats-section" class="hidden mb-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="stat-card"><div id="stat-rows" class="stat-value">-</div><div class="stat-label">数据行数</div></div>
+                <div class="stat-card"><div id="stat-cols" class="stat-value">-</div><div class="stat-label">数据列数</div></div>
+                <div class="stat-card"><div id="stat-numeric" class="stat-value">-</div><div class="stat-label">数值列</div></div>
+                <div class="stat-card"><div id="stat-missing" class="stat-value">-</div><div class="stat-label">缺失值</div></div>
+            </div>
+        </div>
+
+        <!-- Data Preview Table -->
+        <div id="preview-section" class="hidden mb-8">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined text-secondary">table_chart</span>
+                <h2 class="text-xl font-bold text-on-surface">数据预览</h2>
+            </div>
+            <div class="glass-card rounded-2xl p-6 overflow-x-auto">
+                <table id="data-table" class="data-table"></table>
+            </div>
+        </div>
+
+        <!-- Analysis Result -->
+        <div id="result-section" class="hidden">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined text-secondary">lightbulb</span>
+                <h2 class="text-xl font-bold text-on-surface">分析报告</h2>
+            </div>
+            <div class="result-card rounded-2xl p-6 md:p-8">
+                <div id="result-content" class="text-on-surface leading-relaxed"></div>
+            </div>
+
+            <div class="flex flex-wrap gap-3 mt-6">
+                <button onclick="copyResult()" class="btn-secondary px-5 py-3 rounded-xl font-medium text-on-surface flex items-center gap-2">
+                    <span class="material-symbols-outlined">content_copy</span> 复制
+                </button>
+                <button onclick="exportResult('docx')" class="btn-secondary px-5 py-3 rounded-xl font-medium text-on-surface flex items-center gap-2">
+                    <span class="material-symbols-outlined">description</span> 导出 Word
+                </button>
+                <button onclick="exportResult('pdf')" class="btn-secondary px-5 py-3 rounded-xl font-medium text-on-surface flex items-center gap-2">
+                    <span class="material-symbols-outlined">picture_as_pdf</span> 导出 PDF
+                </button>
+                <button onclick="analyzeCSV()" class="btn-primary px-6 py-3 rounded-xl font-semibold flex items-center gap-2">
+                    <span class="material-symbols-outlined">refresh</span> 重新分析
+                </button>
+            </div>
+
+            <div id="export-preview" class="hidden mt-6">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-lg font-semibold text-on-surface flex items-center gap-2">
+                        <span class="material-symbols-outlined text-secondary">preview</span> 文档预览
+                    </h3>
+                    <a id="export-download-link" href="#" download class="btn-primary px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1">
+                        <span class="material-symbols-outlined text-base">download</span> 下载
+                    </a>
+                </div>
+                <div class="result-card rounded-2xl p-4">
+                    <iframe id="export-iframe" class="w-full rounded-lg" style="height: 600px; background: white;"></iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="relative z-10 border-t border-white/5 py-8 mt-12">
+            <div class="text-center text-on-surface-variant text-sm">
+                <p>© 2024 AI助手 - CSV 智能分析工具</p>
+            </div>
+        </footer>
+    </div>
+
+    {% include "_settings_modal.html" %}
+
+    <script src="/static/js/utils.js"></script>
+    <script>
+        // p5.js Particle System
+        let particles = [];
+        const particleCount = 40;
+        class Particle {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = random(width); this.y = random(height);
+                this.size = random(1, 2.5);
+                this.speedX = random(-0.2, 0.2); this.speedY = random(-0.2, 0.2);
+                this.opacity = random(80, 150);
+                this.color = random(['#4cd7f6', '#c0c1ff']);
+            }
+            update() { this.x += this.speedX; this.y += this.speedY; if (this.x < 0 || this.x > width || this.y < 0 || this.y > height) this.reset(); }
+            draw() { noStroke(); fill(this.color + hex(floor(this.opacity), 2)); circle(this.x, this.y, this.size); }
+        }
+        function setup() { const c = createCanvas(windowWidth, windowHeight); c.parent('p5-canvas'); for (let i = 0; i < particleCount; i++) particles.push(new Particle()); }
+        function draw() { clear(); for (let i = 0; i < particles.length; i++) for (let j = i + 1; j < particles.length; j++) { const d = dist(particles[i].x, particles[i].y, particles[j].x, particles[j].y); if (d < 120) { stroke(76, 215, 246, map(d, 0, 120, 30, 0)); strokeWeight(0.5); line(particles[i].x, particles[i].y, particles[j].x, particles[j].y); } } particles.forEach(p => { p.update(); p.draw(); }); }
+        function windowResized() { resizeCanvas(windowWidth, windowHeight); }
+
+        let selectedFile = null;
+        let currentResultText = '';
+        const TOOL_NAME = 'csv';
+
+        function handleFileSelect(file) {
+            const allowed = ['.csv', '.tsv', '.txt'];
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+            if (!allowed.includes(ext)) { showError('不支持的文件格式：' + ext); return; }
+            if (file.size > 20 * 1024 * 1024) { showError('文件超过 20MB 限制'); return; }
+            selectedFile = file;
+            showUploadSuccess('csv-upload-default', 'csv-upload-success', 'csv-filename', file.name);
+            hideError();
+        }
+
+        function clearCSVFile() {
+            selectedFile = null;
+            document.getElementById('csv-file').value = '';
+            clearUpload('csv-upload-default', 'csv-upload-success');
+        }
+
+        async function analyzeCSV() {
+            const text = document.getElementById('text-input').value.trim();
+            if (!text && !selectedFile) { showError('请上传 CSV 文件或输入数据'); return; }
+            hideError(); hideResult(); hidePreview(); hideExportPreview();
+            showLoading();
+            try {
+                let response, data;
+                if (selectedFile) {
+                    const fd = new FormData(); fd.append('file', selectedFile);
+                    response = await fetch('/api/csv/upload', { method: 'POST', body: fd });
+                } else {
+                    response = await fetch('/api/csv/analyze', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ data: text }),
+                    });
+                }
+                data = await response.json();
+                if (response.ok) {
+                    if (data.preview) displayPreview(data.preview);
+                    if (data.stats) displayStats(data.stats);
+                    currentResultText = data.analysis || '';
+                    if (currentResultText) showResult(currentResultText);
+                    if (currentResultText) {
+                        saveHistory({
+                            tool: TOOL_NAME,
+                            title: 'CSV分析 - ' + (selectedFile ? selectedFile.name : '文本') + ' - ' + new Date().toLocaleString('zh-CN'),
+                            input_text: (data.preview && data.preview.columns) ? data.preview.columns.join(', ') : (text || '').slice(0, 200),
+                            output_text: currentResultText,
+                            meta: { source: selectedFile ? 'file' : 'text', rows: (data.preview && data.preview.row_count) || 0 },
+                        });
+                    } else {
+                        showResult('未生成分析报告');
+                    }
+                } else {
+                    showError(data.error || '分析失败');
+                }
+            } catch (e) {
+                showError('网络错误，请检查后端服务是否运行在 localhost:5001');
+            } finally { hideLoading(); }
+        }
+
+        function displayPreview(preview) {
+            if (!preview || !preview.columns || !preview.head) return;
+            const table = document.getElementById('data-table');
+            let html = '<thead><tr>';
+            preview.columns.forEach(col => { html += `<th>${escapeHtml(col)}</th>`; });
+            html += '</tr></thead><tbody>';
+            preview.head.forEach(row => {
+                html += '<tr>';
+                preview.columns.forEach(col => { html += `<td>${escapeHtml(row[col])}</td>`; });
+                html += '</tr>';
+            });
+            html += '</tbody>';
+            if (preview.row_count > 10) {
+                html += `<tfoot><tr><td colspan="${preview.columns.length}" class="text-center text-on-surface-variant py-3">... 共 ${preview.row_count} 行数据</td></tr></tfoot>`;
+            }
+            table.innerHTML = html;
+            document.getElementById('preview-section').classList.remove('hidden');
+        }
+
+        function displayStats(stats) {
+            document.getElementById('stat-rows').textContent = stats.rows ?? '-';
+            document.getElementById('stat-cols').textContent = stats.columns ?? '-';
+            document.getElementById('stat-numeric').textContent = stats.numeric_columns ?? '-';
+            document.getElementById('stat-missing').textContent = stats.missing_values ?? '0';
+            document.getElementById('stats-section').classList.remove('hidden');
+        }
+
+        function hidePreview() {
+            document.getElementById('preview-section').classList.add('hidden');
+            document.getElementById('stats-section').classList.add('hidden');
+        }
+
+        function clearInput() {
+            document.getElementById('text-input').value = '';
+            clearCSVFile();
+            hidePreview();
+            hideResult();
+            hideExportPreview();
+            hideError();
+        }
+
+        function showLoading() { document.getElementById('loading-state').classList.remove('hidden'); document.getElementById('analyze-btn').disabled = true; }
+        function hideLoading() { document.getElementById('loading-state').classList.add('hidden'); document.getElementById('analyze-btn').disabled = false; }
+        function showResult(content) { document.getElementById('result-content').innerHTML = renderMarkdown(content); document.getElementById('result-section').classList.remove('hidden'); }
+        function hideResult() { document.getElementById('result-section').classList.add('hidden'); }
+        function showError(message) { document.getElementById('error-message').textContent = message; document.getElementById('error-state').classList.remove('hidden'); }
+        function hideError() { document.getElementById('error-state').classList.add('hidden'); }
+        function copyResult() { if (currentResultText) copyText(currentResultText); }
+        async function exportResult(format) { await exportAndPreview(format, currentResultText, 'CSV 数据分析报告'); }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initFileUpload({
+                dropzoneId: 'csv-dropzone', fileInputId: 'csv-file',
+                defaultId: 'csv-upload-default', successId: 'csv-upload-success',
+                filenameId: 'csv-filename', onSelect: handleFileSelect,
+            });
+            initHistorySidebar(TOOL_NAME);
+        });
+    </script>
+
+    {% include "_history_sidebar.html" %}
+</body>
+</html>
