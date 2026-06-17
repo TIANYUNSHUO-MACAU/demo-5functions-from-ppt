@@ -1,12 +1,13 @@
-# 多功能智能助手平台 - 依赖清单
+# ScholarAI - 依赖清单
 # Python 3.11+
 
 # Web框架
 flask==3.0.3
 flask-cors==4.0.0
 
-# AI调用
-openai==1.30.0
+# AI调用（openai 1.x 需配合 httpx<0.28，否则客户端初始化失败）
+openai==1.55.3
+httpx==0.27.2
 
 # PDF解析（推荐pdfplumber，备选PyPDF2）
 pdfplumber==0.11.0

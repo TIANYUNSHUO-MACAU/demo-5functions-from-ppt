@@ -1,12 +1,12 @@
-# 多功能智能助手平台
+# ScholarAI - 学术极简智能助手
 
-一个网页入口 + 五个 AI 小工具，基于 Flask + DeepSeek API 构建。
+单页应用（SPA）+ 五个 AI 小工具，基于 Flask + DeepSeek API 构建。
 
 ## 功能模块
 
 | 功能 | 入口路由 | API 前缀 | 核心能力 |
 |------|---------|----------|----------|
-| 简历优化 | `/resume` | `/api/resume` | 文本/文件上传、Markdown 渲染、简历内容拆分导出、历史记录 |
+| 简历优化 | `/resume` | `/api/resume` | 文本/文件上传、**联网参考同类简历改写**、Markdown 渲染、简历内容拆分导出、历史记录 |
 | 文案生成 | `/copywriting` | `/api/copywriting` | 多方案生成、分隔符清理、Markdown 渲染 |
 | 翻译助手 | `/translate` | `/api/translate` | 中英互译 + 润色、文件上传 (PDF/Word/TXT) |
 | PDF 摘要 | `/pdf` | `/api/pdf` | 文件上传、结构化摘要、Markdown 渲染 |
@@ -27,7 +27,7 @@
 | 文档解析 | pdfplumber / PyPDF2 / python-docx |
 | 导出 | python-docx (Word) / reportlab (PDF, LaTeX 风格) |
 | 数据存储 | SQLite（历史记录）|
-| 前端 | HTML + Jinja2 模板 + Tailwind CSS + p5.js 粒子效果 |
+| 前端 | HTML + Jinja2 SPA + Tailwind CSS（ScholarAI 学术极简设计） |
 
 ## 快速开始
 
@@ -57,8 +57,8 @@ python app.py
 ## 项目结构
 
 ```
-ai-assistant-platform/
-├── app.py                  # Flask 主入口（注册 7 个路由、配置上传目录）
+scholarai_deploy/
+├── app.py                  # Flask 主入口（所有页面路由返回 index.html SPA）
 ├── requirements.txt        # 依赖清单
 ├── .env.example            # 环境变量模板（AI Key / API Base / Model）
 ├── data/                   # SQLite 数据库存放目录（运行时创建）
@@ -78,15 +78,10 @@ ai-assistant-platform/
 │   ├── exporter.py         # Markdown → Word(Python-docx) / PDF(reportlab LaTeX 风格)
 │   └── history_store.py    # SQLite 历史记录：save/list/get/delete/clear
 │
-├── templates/              # 前端 HTML 模板
-│   ├── index.html          # 首页（工具卡片入口）
-│   ├── resume.html         # 简历优化（文件上传 + 导出 + 历史侧栏）
-│   ├── copywriting.html    # 文案生成
-│   ├── translate.html      # 翻译助手（翻译/润色双模式）
-│   ├── pdf.html            # PDF 摘要
-│   ├── csv.html            # CSV 预览
+├── templates/              # 前端 HTML 模板（单页应用）
+│   ├── index.html          # ScholarAI 主界面（Dashboard + 五个工具 Tab）
 │   ├── _settings_modal.html # 右上角 API Key 配置弹窗
-│   └── _history_sidebar.html # 历史记录侧栏（每个工具页面复用）
+│   └── _history_sidebar.html # 历史记录侧栏
 │
 └── static/                 # 静态资源
     ├── js/utils.js         # 通用工具函数（Markdown 渲染 / 文件上传 / 导出 / 历史记录）
@@ -119,6 +114,24 @@ Content-Type: multipart/form-data
 请求：file=<简历文件>
 响应：同上（自动提取文本后优化）
 ```
+
+**联网参考同类简历（需配置搜索 Key）：**
+```
+POST /api/resume/optimize_with_reference
+Content-Type: application/json 或 multipart/form-data
+
+请求：{ "text": "..." } 或 file=<简历文件>
+流程：AI 推断目标岗位 → 联网检索同类岗位的公开简历范例/写法 → 参照范例改写
+响应：{
+  "success": true,
+  "result": "...",
+  "optimized_resume": "...",
+  "references": [{ "title": "...", "url": "..." }],  // 参考来源
+  "used_reference": true,        // 未配置搜索 Key 时为 false，自动回退为基础优化
+  "role_query": "前端工程师 互联网"
+}
+```
+> 合规说明：不直连/不爬取 LinkedIn 等登录站点，仅通过搜索 API（Tavily，配置见 `.env` 的 `SEARCH_API_KEY`）获取公开网页作为写作参考；Prompt 严格禁止编造用户不具备的经历。
 
 ### 文案生成
 
@@ -190,8 +203,8 @@ Content-Type: multipart/form-data
 ### 配置管理
 
 ```
-GET  /api/config           # 获取当前配置状态（是否已配置 Key）
-POST /api/config           # 保存 API Key / Base URL / Model 到 .env
+GET  /api/config           # 获取当前配置状态（含 has_search_key / masked_search_key）
+POST /api/config           # 保存 API Key / Base URL / Model（可选 search_api_key）到 .env
 POST /api/config/test      # 测试当前配置的 AI 连接
 ```
 

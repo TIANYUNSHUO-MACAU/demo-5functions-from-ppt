@@ -459,11 +459,16 @@
                                 </div>
                                 <textarea id="resume-input" class="w-full bg-transparent border-none focus:ring-0 text-sm text-on-surface placeholder:text-on-surface-variant/40 resize-none min-h-[80px]" placeholder="在此粘贴您的简历内容，或描述您的优化目标..."></textarea>
                                 <div class="flex justify-between items-center pt-2 border-t border-surface-container-high">
-                                    <div class="flex items-center">
+                                    <div class="flex items-center gap-1">
                                         <button onclick="triggerUpload('resume')" class="p-2 hover:bg-surface-container rounded-full text-on-surface-variant transition-colors" title="上传简历文档 (.pdf, .docx, .doc, .txt)">
                                             <span class="material-symbols-outlined text-[20px]">attach_file</span>
                                         </button>
                                         <input type="file" id="resume-file" class="hidden" accept=".pdf,.docx,.doc,.txt" onchange="handleFileChange('resume', this)"/>
+                                        <label class="flex items-center gap-1 px-2 py-1 rounded-full text-xs text-on-surface-variant cursor-pointer hover:bg-surface-container transition-colors select-none" title="联网检索同类岗位的公开简历范例，参照其写法改写（需在设置中配置搜索 Key）">
+                                            <input type="checkbox" id="resume-use-reference" class="w-3.5 h-3.5 rounded accent-primary"/>
+                                            <span class="material-symbols-outlined text-[16px]">travel_explore</span>
+                                            联网参考同类简历
+                                        </label>
                                     </div>
                                     <div class="flex gap-2">
                                         <button onclick="clearResumeInput()" class="px-3 py-1.5 text-xs border border-outline-variant rounded-xl hover:bg-surface-container transition-colors">清空</button>
@@ -1190,6 +1195,22 @@
         document.getElementById('resume-result-content').innerHTML = '';
     }
 
+    // 渲染"参考来源"列表（联网参考模式返回的 references）
+    function renderReferences(references) {
+        if (!references || !references.length) return '';
+        const items = references.map(r => {
+            const title = (r.title || r.url || '').replace(/</g, '&lt;');
+            const url = (r.url || '').replace(/"/g, '&quot;');
+            return `<li class="truncate"><a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">${title}</a></li>`;
+        }).join('');
+        return `<div class="mt-4 pt-3 border-t border-outline-variant">
+            <div class="flex items-center gap-1 text-xs font-medium text-on-surface-variant mb-2">
+                <span class="material-symbols-outlined text-[16px]">travel_explore</span>参考来源（公开简历范例）
+            </div>
+            <ul class="text-xs space-y-1 list-disc pl-5 text-on-surface-variant">${items}</ul>
+        </div>`;
+    }
+
     async function optimizeResume() {
         const input = document.getElementById('resume-input').value.trim();
         if (!input && !selectedFiles['resume']) { showError('resume', '请输入简历内容或上传文件'); return; }
@@ -1199,14 +1220,17 @@
         document.getElementById('resume-loading-state').classList.remove('hidden');
         document.getElementById('resume-optimize-btn').disabled = true;
 
+        const useReference = document.getElementById('resume-use-reference')?.checked;
+        const endpoint = useReference ? '/api/resume/optimize_with_reference' : '/api/resume/optimize';
+
         try {
             let response, data;
             if (selectedFiles['resume']) {
                 const formData = new FormData();
                 formData.append('file', selectedFiles['resume']);
-                response = await fetch('/api/resume/optimize', { method: 'POST', body: formData });
+                response = await fetch(endpoint, { method: 'POST', body: formData });
             } else {
-                response = await fetch('/api/resume/optimize', {
+                response = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: input }),
@@ -1217,8 +1241,9 @@
                 const text = data.result || data.optimized || data.resume || '';
                 currentResumeText = text;
                 currentExportText = data.optimized_resume || data.resume_only || text;
-                
-                document.getElementById('resume-result-content').innerHTML = renderMarkdown(text);
+
+                document.getElementById('resume-result-content').innerHTML =
+                    renderMarkdown(text) + renderReferences(data.references);
                 showRightPanel('resume');
                 addChatMessage('resume', input || selectedFiles['resume'].name, '简历优化排版');
                 

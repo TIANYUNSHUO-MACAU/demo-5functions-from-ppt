@@ -41,10 +41,17 @@ def update_config():
     }
     """
     data = request.get_json(silent=True) or {}
-    api_key = (data.get("api_key") or "").strip()
+    # api_key 未传该字段则为 None（保留已保存的 AI 配置，用于"只填搜索 Key"场景）
+    api_key = data.get("api_key", None)
+    if api_key is not None:
+        api_key = str(api_key).strip()
     api_base = (data.get("api_base") or "").strip()
     model = (data.get("model") or "").strip()
     provider_id = (data.get("provider_id") or "").strip()
+    # 联网搜索 Key：未传该字段则不改动（None），传了（含空串）则覆盖
+    search_api_key = data.get("search_api_key", None)
+    if search_api_key is not None:
+        search_api_key = str(search_api_key).strip()
 
     # 选择了预设模型，但没填 base/model -> 自动补全
     if provider_id and provider_id != "custom":
@@ -61,6 +68,7 @@ def update_config():
         api_key=api_key,
         api_base=api_base,
         model=model,
+        search_api_key=search_api_key,
     )
     return jsonify(result)
 

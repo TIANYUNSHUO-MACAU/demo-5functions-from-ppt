@@ -8,3 +8,5 @@ static/uploads/*
 *.log
 data/
 static/exports/
+.idea/
+.venv/

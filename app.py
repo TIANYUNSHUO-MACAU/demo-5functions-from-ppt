@@ -1,4 +1,4 @@
-# 多功能智能助手平台 - 后端服务
+# ScholarAI - 学术极简智能助手 - 后端服务
 # Python 3.11 + Flask
 
 from flask import Flask, jsonify, request, render_template
@@ -53,7 +53,7 @@ def index():
 # 健康检查
 @app.route('/api/health')
 def health():
-    return jsonify({"status": "ok", "message": "多功能智能助手平台运行中"})
+    return jsonify({"status": "ok", "message": "ScholarAI 运行中"})
 
 
 if __name__ == '__main__':

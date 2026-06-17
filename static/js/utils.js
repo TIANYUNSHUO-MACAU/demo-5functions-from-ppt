@@ -314,9 +314,12 @@ async function loadConfig() {
             const statusDot = document.getElementById('cfg-status-dot');
             const statusText = document.getElementById('cfg-status-text');
 
+            const searchKeyInput = document.getElementById('cfg-search-key');
+
             if (keyInput && s.masked_key) keyInput.placeholder = s.masked_key || '请输入 API Key';
             if (baseInput) baseInput.value = s.api_base || '';
             if (modelInput) modelInput.value = s.model || '';
+            if (searchKeyInput) searchKeyInput.placeholder = s.has_search_key ? (s.masked_search_key || '已配置') : 'tvly-...';
             if (statusDot) statusDot.className = 'w-2 h-2 rounded-full ' + (s.active ? 'bg-green-500' : 'bg-outline');
             if (statusText) statusText.textContent = s.active ? 'AI 已连接' : (s.use_mock ? '模拟模式' : '未配置');
         }
@@ -329,11 +332,17 @@ async function saveConfig(silent = false) {
     const key = document.getElementById('cfg-api-key')?.value?.trim() || '';
     const base = document.getElementById('cfg-api-base')?.value?.trim() || '';
     const model = document.getElementById('cfg-model')?.value?.trim() || '';
+    const searchKey = document.getElementById('cfg-search-key')?.value?.trim() || '';
     try {
+        const body = {};
+        // 仅当用户实际输入了 AI Key 时才提交 AI 配置，避免空值清空已保存的 Key
+        if (key) { body.api_key = key; body.api_base = base; body.model = model; }
+        // 仅当用户实际输入了搜索 Key 时才提交，避免空值覆盖已保存的 Key
+        if (searchKey) body.search_api_key = searchKey;
         const res = await fetch('/api/config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ api_key: key, api_base: base, model: model }),
+            body: JSON.stringify(body),
         });
         const data = await res.json();
         if (data.success) {

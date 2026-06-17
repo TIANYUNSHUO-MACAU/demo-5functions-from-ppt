@@ -133,6 +133,8 @@ class AIService:
         self.model = "gpt-3.5-turbo"
         self.use_mock = True
         self.client = None
+        # 联网搜索 API Key（用于简历联网参考，可选）
+        self.search_api_key = ""
 
         # 初始化时从 .env 同步一次
         self.reload_from_env()
@@ -144,6 +146,7 @@ class AIService:
         self.api_key = env.get("AI_API_KEY", "") or ""
         self.api_base = env.get("AI_API_BASE", "") or "https://api.openai.com/v1"
         self.model = env.get("AI_MODEL", "") or "gpt-3.5-turbo"
+        self.search_api_key = env.get("SEARCH_API_KEY", "") or ""
 
         explicit_mock = env.get("USE_MOCK", "").lower()
         if explicit_mock in ("true", "false"):
@@ -165,15 +168,28 @@ class AIService:
 
     def update_config(
         self,
-        api_key: str = "",
+        api_key: str = None,
         api_base: str = "",
         model: str = "",
         use_mock: bool = False,
+        search_api_key: str = None,
     ) -> dict:
         """
         运行时更新配置，同时写入 .env。
         返回更新后的状态。
+
+        - api_key 为 None 时表示"不改动 AI 配置"（仅可能更新搜索 Key），用于"只填搜索 Key 保存"
+          的场景，避免空值把已保存的 AI Key 误清空；传入字符串（含空字符串 "" 表示清空）才会改动。
+        - search_api_key 为 None 时表示本次不改动联网搜索 Key；传入字符串（含空字符串）则覆盖。
         """
+        # api_key 省略（None）：保留全部 AI 配置不变，仅在需要时更新搜索 Key
+        if api_key is None:
+            if search_api_key is not None:
+                self.search_api_key = (search_api_key or "").strip()
+                _write_env_file(self.env_path, {"SEARCH_API_KEY": self.search_api_key})
+                os.environ["SEARCH_API_KEY"] = self.search_api_key
+            return {"success": True, "status": self.get_status()}
+
         api_key = (api_key or "").strip()
         api_base = (api_base or "").strip()
         model = (model or "").strip()
@@ -191,16 +207,19 @@ class AIService:
         else:
             effective_use_mock = True
 
+        # 组装要写入 .env 的键值
+        env_updates = {
+            "AI_API_KEY": api_key,
+            "AI_API_BASE": api_base,
+            "AI_MODEL": model,
+            "USE_MOCK": "true" if effective_use_mock else "false",
+        }
+        if search_api_key is not None:
+            self.search_api_key = (search_api_key or "").strip()
+            env_updates["SEARCH_API_KEY"] = self.search_api_key
+
         # 写入 .env
-        _write_env_file(
-            self.env_path,
-            {
-                "AI_API_KEY": api_key,
-                "AI_API_BASE": api_base,
-                "AI_MODEL": model,
-                "USE_MOCK": "true" if effective_use_mock else "false",
-            },
-        )
+        _write_env_file(self.env_path, env_updates)
 
         # 更新内存
         self.api_key = api_key
@@ -214,6 +233,8 @@ class AIService:
         os.environ["AI_API_BASE"] = self.api_base
         os.environ["AI_MODEL"] = self.model
         os.environ["USE_MOCK"] = "true" if self.use_mock else "false"
+        if search_api_key is not None:
+            os.environ["SEARCH_API_KEY"] = self.search_api_key
 
         return {"success": True, "status": self.get_status()}
 
@@ -229,6 +250,8 @@ class AIService:
             "use_mock": self.use_mock,
             "active": active,
             "providers": MODEL_PROVIDERS,
+            "has_search_key": bool(self.search_api_key),
+            "masked_search_key": _mask_key(self.search_api_key),
         }
 
     def test_connection(self) -> dict:
