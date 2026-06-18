@@ -385,5 +385,63 @@ function toggleSettings() {
     const modal = document.getElementById('settings-modal');
     if (!modal) return;
     modal.classList.toggle('hidden');
-    if (!modal.classList.contains('hidden')) loadConfig();
+    if (!modal.classList.contains('hidden')) {
+        loadConfig();
+        if (typeof loadUsage === 'function') loadUsage();
+    }
+}
+
+// ============== 流式请求助手（200ms 节流，平滑显示）==============
+
+async function streamFetch(url, options, onChunk, onMeta, onDone) {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        throw new Error(err.error || `HTTP ${response.status}`);
+    }
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let result = '';
+    let lastFlush = 0;
+    const THROTTLE = 200;
+
+    function flush() { lastFlush = Date.now(); onChunk(result); }
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+                const data = JSON.parse(line.slice(6));
+                if (data.error) throw new Error(data.error);
+                if (data.preview !== undefined || data.text_length !== undefined) { if (onMeta) onMeta(data); }
+                if (data.text) {
+                    result += data.text;
+                    if (lastFlush === 0 || Date.now() - lastFlush >= THROTTLE) flush();
+                }
+                if (data.done) { flush(); if (onDone) onDone(data); return result; }
+            } catch (e) { if (e instanceof SyntaxError) continue; throw e; }
+        }
+    }
+    flush();
+    if (onDone) onDone({});
+    return result;
+}
+
+async function loadUsage() {
+    try {
+        const res = await fetch('/api/config/usage');
+        const data = await res.json();
+        if (data.success && data.usage) {
+            const el = (id) => document.getElementById(id);
+            if (el('usage-tokens')) el('usage-tokens').textContent = (data.usage.total_tokens || 0).toLocaleString();
+            if (el('usage-calls')) el('usage-calls').textContent = data.usage.total_calls || 0;
+            if (el('usage-days')) el('usage-days').textContent = Object.keys(data.usage.by_day || {}).length;
+        }
+    } catch (e) { console.error('loadUsage', e); }
 }

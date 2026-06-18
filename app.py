@@ -13,6 +13,7 @@ from routes.pdf_summary import pdf_summary_bp
 from routes.csv_preview import csv_preview_bp
 from routes.config import config_bp
 from routes.history import history_bp
+from routes.stream import stream_bp
 
 app = Flask(__name__,
             template_folder='templates',
@@ -35,6 +36,7 @@ app.register_blueprint(pdf_summary_bp, url_prefix='/api/pdf')
 app.register_blueprint(csv_preview_bp, url_prefix='/api/csv')
 app.register_blueprint(config_bp, url_prefix='/api/config')
 app.register_blueprint(history_bp, url_prefix='/api/history')
+app.register_blueprint(stream_bp)
 
 
 # 首页及工具页面路由均返回单页应用模版
@@ -57,4 +59,4 @@ def health():
 
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=5001)
+    app.run(debug=False, host='0.0.0.0', port=5001, threaded=True)

@@ -55,6 +55,27 @@
                 <p class="text-xs text-on-surface-variant/70 mt-1.5">用于简历「联网参考同类简历」功能。Tavily 提供免费额度，留空则该功能回退为基础优化。</p>
             </div>
         </div>
+        <!-- 用量统计 -->
+        <div class="px-6 py-3 border-t border-outline-variant bg-surface-container-low/50">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="material-symbols-outlined text-on-surface-variant text-[18px]">monitoring</span>
+                <span class="text-sm font-medium text-on-surface-variant">Token 用量</span>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+                <div class="bg-surface-container rounded-xl p-2 text-center">
+                    <div id="usage-tokens" class="text-lg font-bold text-primary">0</div>
+                    <div class="text-[10px] text-on-surface-variant">累计 tokens</div>
+                </div>
+                <div class="bg-surface-container rounded-xl p-2 text-center">
+                    <div id="usage-calls" class="text-lg font-bold text-primary">0</div>
+                    <div class="text-[10px] text-on-surface-variant">累计调用</div>
+                </div>
+                <div class="bg-surface-container rounded-xl p-2 text-center">
+                    <div id="usage-days" class="text-lg font-bold text-primary">0</div>
+                    <div class="text-[10px] text-on-surface-variant">活跃天数</div>
+                </div>
+            </div>
+        </div>
         <!-- 底部按钮 -->
         <div class="flex items-center justify-between px-6 py-4 border-t border-outline-variant bg-surface-container-low">
             <button id="cfg-test-btn" onclick="testConfig()" class="px-4 py-2 text-sm text-primary border border-primary rounded-xl hover:bg-primary-fixed transition-colors">

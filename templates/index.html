@@ -1827,5 +1827,99 @@
         }
     }
 </script>
+
+<!-- ====== 流式拦截（不改已有代码，在末尾追加）====== -->
+<script>
+(function() {
+    const STREAM_MAP = {
+        '/api/resume/optimize': { stream: '/api/resume/optimize_stream', tool: 'resume', resultId: 'resume-result-content' },
+        '/api/copywriting/generate': { stream: '/api/copywriting/generate_stream', tool: 'copy', resultId: 'copy-result-list' },
+        '/api/translate/translate': { stream: '/api/translate/translate_stream', tool: 'translate', resultId: 'translate-result-content' },
+        '/api/pdf/upload': { stream: '/api/pdf/upload_stream', tool: 'pdf', resultId: 'pdf-result-content' },
+        '/api/csv/upload': { stream: '/api/csv/upload_stream', tool: 'csv', resultId: 'csv-result-content' },
+    };
+    const origFetch = window.fetch;
+    window.fetch = async function(url, opts) {
+        const u = typeof url === 'string' ? url : (url && url.url) || '';
+        const cfg = STREAM_MAP[u];
+        if (!cfg) return origFetch.apply(this, arguments);
+
+        const resp = await origFetch.call(this, cfg.stream, opts);
+        if (!resp.ok) return resp;
+
+        const reader = resp.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '', full = '', meta = {}, lastFlush = 0, firstChunk = true;
+        const tool = cfg.tool;
+
+        let errorOccurred = false;
+
+        function flush() {
+            lastFlush = Date.now();
+            const el = document.getElementById(cfg.resultId);
+            if (el && typeof renderMarkdown === 'function' && full) {
+                el.innerHTML = renderMarkdown(full);
+            }
+            // 文案工具需要同步 currentCopyResultText（saveHistory 用）
+            if (tool === 'copy' && typeof currentCopyResultText !== 'undefined') {
+                currentCopyResultText = full;
+            }
+        }
+
+        function onFirstChunk() {
+            firstChunk = false;
+            if (typeof showRightPanel === 'function') showRightPanel(tool);
+            const ls = document.getElementById(tool + '-loading-state');
+            if (ls) ls.classList.add('hidden');
+        }
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            const lines = buf.split('\n');
+            buf = lines.pop();
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                try {
+                    const d = JSON.parse(line.slice(6));
+                    if (d.error) {
+                        errorOccurred = true;
+                        full = d.error;
+                        if (firstChunk) onFirstChunk();
+                        if (typeof showError === 'function') showError(tool, d.error);
+                        break;
+                    }
+                    if (d.preview) meta.preview = d.preview;
+                    if (d.text_length !== undefined) meta.text_length = d.text_length;
+                    if (d.filename) meta.filename = d.filename;
+                    if (d.text) {
+                        if (firstChunk) onFirstChunk();
+                        full += d.text;
+                        if (lastFlush === 0 || Date.now() - lastFlush >= 200) flush();
+                    }
+                    if (d.done) break;
+                } catch(e) { /* skip */ }
+            }
+        }
+        if (firstChunk) onFirstChunk();
+        if (errorOccurred) {
+            // 返回错误 JSON，让已有代码走 error 分支
+            return new Response(JSON.stringify({ success: false, error: full }), {
+                status: 400, headers: { 'Content-Type': 'application/json' }
+            });
+        }
+        flush();
+
+        const body = { success: true, result: full };
+        if (meta.preview) body.preview = meta.preview;
+        if (meta.text_length !== undefined) body.text_length = meta.text_length;
+        if (meta.filename) body.filename = meta.filename;
+        return new Response(JSON.stringify(body), {
+            status: 200, headers: { 'Content-Type': 'application/json' }
+        });
+    };
+})();
+</script>
 </body>
 </html>

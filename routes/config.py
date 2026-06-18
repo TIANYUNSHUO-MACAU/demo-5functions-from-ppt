@@ -85,6 +85,13 @@ def test_config():
     return jsonify(ai_service.test_connection())
 
 
+@config_bp.route("/usage", methods=["GET"])
+def get_usage():
+    """返回 token 用量统计。"""
+    from services.history_store import get_usage_stats
+    return jsonify({"success": True, "usage": get_usage_stats()})
+
+
 @config_bp.route("/reset", methods=["POST"])
 def reset_config():
     """

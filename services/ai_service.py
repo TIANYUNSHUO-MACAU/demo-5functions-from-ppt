@@ -135,6 +135,7 @@ class AIService:
         self.client = None
         # 联网搜索 API Key（用于简历联网参考，可选）
         self.search_api_key = ""
+        self._CACHE = {}  # LRU 缓存
 
         # 初始化时从 .env 同步一次
         self.reload_from_env()
@@ -282,31 +283,119 @@ class AIService:
 
     # ---------- 业务调用 ----------
     def chat(self, system_prompt: str, user_prompt: str, temperature: float = 0.7) -> str:
-        """
-        统一的 AI 对话接口
-        :param system_prompt: 系统提示词
-        :param user_prompt: 用户输入
-        :param temperature: 创造性程度 0-1
-        :return: AI 回复文本
-        """
+        """统一的 AI 对话接口（带缓存 + 重试 + 超时 + 用量记录）。"""
         if self.use_mock or not self.client:
             return self._mock_response(system_prompt, user_prompt)
 
+        cache_key = (self.model, system_prompt[:200], temperature, user_prompt[:500])
+        if cache_key in self._CACHE:
+            return self._CACHE[cache_key]
+
+        for attempt in range(3):
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=temperature,
+                    timeout=60,
+                )
+                result = response.choices[0].message.content
+                if hasattr(response, 'usage') and response.usage:
+                    self._record_usage(response.usage)
+                self._CACHE[cache_key] = result
+                if len(self._CACHE) > 128:
+                    self._CACHE.pop(next(iter(self._CACHE)))
+                return result
+            except Exception as e:
+                if attempt < 2 and self._is_retryable(e):
+                    import time; time.sleep(2 ** attempt)
+                    continue
+                return self._friendly_error(e) + "\n\n" + self._mock_response(system_prompt, user_prompt)
+
+    def chat_stream(self, system_prompt: str, user_prompt: str, temperature: float = 0.7):
+        """流式 AI 对话：逐块 yield 文本（含用量记录 + 空choices 守卫）。"""
+        if self.use_mock or not self.client:
+            yield self._mock_response(system_prompt, user_prompt)
+            return
         try:
-            response = self.client.chat.completions.create(
+            stream = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=temperature,
+                stream=True,
+                stream_options={"include_usage": True},
+                timeout=60,
             )
-            return response.choices[0].message.content
+            for chunk in stream:
+                if hasattr(chunk, 'usage') and chunk.usage:
+                    self._record_usage(chunk.usage)
+                if chunk.choices:
+                    delta = chunk.choices[0].delta
+                    if delta and delta.content:
+                        yield delta.content
         except Exception as e:
-            return (
-                f"[AI 调用失败: {str(e)}，已切换到模拟返回]\n\n"
-                + self._mock_response(system_prompt, user_prompt)
-            )
+            yield f"\n{self._friendly_error(e)}\n"
+
+    def chat_long_stream(self, system_prompt, text, temperature=0.3, chunk_size=5000):
+        """长文档 map-reduce 流式摘要。"""
+        if len(text) <= 12000:
+            yield from self.chat_stream(system_prompt, f"请对以下文档内容生成摘要：\n\n{text}", temperature)
+            return
+        chunks = self._chunk_text(text, chunk_size)
+        from concurrent.futures import ThreadPoolExecutor
+        partials = [None] * len(chunks)
+        def do_chunk(idx, chunk):
+            return idx, self.chat("你是文档摘要助手。请客观、简明地概括给定文本的核心信息（150-250字）。", f"请概括以下内容：\n\n{chunk}", temperature)
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            futures = [ex.submit(do_chunk, i, c) for i, c in enumerate(chunks)]
+            for f in futures:
+                try:
+                    idx, result = f.result()
+                    partials[idx] = result
+                except Exception:
+                    partials[[i for i, fu in enumerate(futures) if fu is f][0]] = "[此段摘要失败]"
+        combined = "\n\n".join(f"【第{i+1}部分】\n{p}" for i, p in enumerate(partials))
+        yield from self.chat_stream(system_prompt, f"请对以下分段摘要生成一份完整的综合摘要：\n\n{combined}", temperature)
+
+    def _chunk_text(self, text, size=5000):
+        chunks = []; start, n = 0, len(text)
+        while start < n:
+            end = min(start + size, n)
+            if end < n:
+                cut = text.rfind("\n", start, end)
+                if cut <= start + size // 2: cut = max(text.rfind("。", start, end), text.rfind(". ", start, end))
+                if cut > start + size // 2: end = cut + 1
+            chunks.append(text[start:end]); start = end
+        return chunks
+
+    def _is_retryable(self, e):
+        msg = str(e).lower()
+        return any(k in msg for k in ["timeout", "timed out", "502", "503", "429", "connection"])
+
+    def _friendly_error(self, e):
+        msg = str(e)
+        if "429" in msg: return "[请求失败] API 额度不足或调用频率过高。请充值或稍后再试。"
+        if "401" in msg: return "[请求失败] API Key 无效或已过期。请在右上角「设置」面板检查。"
+        if "timeout" in msg.lower() or "timed out" in msg.lower(): return "[请求失败] 请求超时。请检查网络连接后重试。"
+        if "connection" in msg.lower(): return "[请求失败] 无法连接服务器。请检查网络或 Base URL。"
+        return f"[请求失败] {msg}"
+
+    def _record_usage(self, usage):
+        try:
+            self._record_usage_raw(getattr(usage, 'prompt_tokens', 0) or 0, getattr(usage, 'completion_tokens', 0) or 0)
+        except Exception: pass
+
+    def _record_usage_raw(self, prompt_tokens, completion_tokens):
+        try:
+            from services.history_store import add_usage
+            add_usage(prompt_tokens, completion_tokens, self.model)
+        except Exception: pass
 
     def _mock_response(self, system_prompt: str, user_prompt: str) -> str:
         """模拟返回 - 用于开发和演示"""
